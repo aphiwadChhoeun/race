@@ -1,0 +1,173 @@
+# Race
+
+A two-player dice race with a real rigid-body physics simulation behind the dice.
+
+```bash
+npm install
+```
+
+```bash
+npm run dev
+```
+
+Built on [cannon-es](https://github.com/pmndrs/cannon-es) for the physics and
+[three.js](https://threejs.org/) for the rendering.
+
+## The dice
+
+Everything dice-related lives in [`src/dice/`](src/dice/). Drop it into any React
+app:
+
+```tsx
+import { DiceTable, useDiceRoll } from './dice'
+
+function Turn() {
+  const { recording, playId, rolling, roll, settle } = useDiceRoll(2)
+
+  const takeTurn = async () => {
+    const faces = await roll() // resolves when the dice stop moving
+    advance(faces[0] + faces[1])
+  }
+
+  return (
+    <>
+      <DiceTable recording={recording} playId={playId} onSettle={settle} />
+      <button onClick={takeTurn} disabled={rolling}>Throw</button>
+    </>
+  )
+}
+```
+
+| File | Role |
+| --- | --- |
+| [`random.ts`](src/dice/random.ts) | Fair outcomes (CSPRNG) and seeded throw variation |
+| [`labeling.ts`](src/dice/labeling.ts) | Cube symmetries — how a fair RNG and real physics coexist |
+| [`physics.ts`](src/dice/physics.ts) | Headless simulation, recorded as a transform track |
+| [`DiceTable.tsx`](src/dice/DiceTable.tsx) | three.js dice, lighting, shadows, and playback |
+| [`sound.ts`](src/dice/sound.ts) | Impact clacks, driven by real collision events |
+| [`useDiceRoll.ts`](src/dice/useDiceRoll.ts) | Outcome and roll lifecycle for a tray of dice |
+
+## How a fair RNG and real physics coexist
+
+The obvious ways to combine them are both bad. Let the physics decide the number
+and the odds become whatever the engine's biases are — unauditable, and they
+change every time you retune a friction value. Rejection-sample the simulation
+until it gives the number you wanted and you pay 6ⁿ simulations for n dice.
+
+This uses neither. A cube has **24 orientation-preserving symmetries**, so for
+*any* orientation the simulation leaves a die in, there is a valid standard-die
+labeling that puts any chosen value face-up. So:
+
+1. The CSPRNG picks the faces.
+2. The physics runs **once**, unsteered, and is recorded.
+3. Each die is then labelled to put its chosen value on whichever face ended up
+   pointing up.
+
+Choosing the labeling afterwards is exactly equivalent to having rotated the
+die's initial orientation by that symmetry — a cube's collision geometry is
+invariant under it, so the recorded motion stays a physically valid motion of the
+relabelled die. The simulation is never steered, and the odds come purely from
+the CSPRNG.
+
+The labeling is fixed before anything is rendered, so the pips are consistent for
+every frame. There is no moment at which a die shows one thing and becomes
+another.
+
+**One simulation per throw, no matter how many dice.** Simulations are rejected
+only for *settling badly* — a die leaning on a rail with no face properly up —
+which happens 6.6% of the time and costs a millisecond to redo.
+
+## Why the throw is simulated up front, not stepped live
+
+`roll()` simulates the whole throw synchronously (~1ms per die) and records a
+track of transforms; playback just samples it. That buys three things:
+
+1. The outcome exists before the first frame is drawn, so game logic never waits
+   on a physics race.
+2. Playback can't stutter, drift, or diverge on a slow frame — there's no
+   integration to fall behind.
+3. A throw that settles badly can be thrown away and resimulated before anyone
+   sees it.
+
+Sound comes from the simulation's real contact events, scheduled against the
+audio clock, so the clacks land on the actual bounces.
+
+## The table is physics-only
+
+The floor and the four rails exist solely in the simulation — the dice roll and
+rebound off them, but nothing is drawn for them. The canvas is transparent, so
+whatever is behind it is the surface the player sees.
+
+The one thing that *is* drawn at ground level is a **shadow catcher**: a plane
+carrying `ShadowMaterial`, which renders only where a shadow falls. Without it
+the dice lose their contact shadows and read as floating in a void — it is the
+shadow, not the surface, that grounds them.
+
+That makes the backdrop colour load-bearing rather than decorative. The shadow
+darkens whatever is behind it by 38%, so on the current near-black background
+that is ~8 luma of contrast — subtle, but legible against the bright dice and
+enough to ground them. A mid-tone or lighter backdrop makes it markedly
+stronger. See the note on `.race__table` in [`race.css`](src/game/race.css),
+which has a felt-toned alternative commented out. To drop shadows entirely,
+remove the catcher block in `DiceTable.tsx` and set `shadowMap.enabled = false`.
+
+## Accessibility and interruption
+
+- `prefers-reduced-motion: reduce` skips playback and shows the settled dice.
+- The game announces the outcome through a `role="status"` region once the dice
+  settle.
+- An interrupted throw shows the outcome it was heading for and still reports the
+  settle, so state and pixels never disagree and the tray can't get stuck.
+- Pressing Throw mid-roll is ignored rather than restarting — that would let a
+  player reroll.
+
+## Verification
+
+**Build and run:** `tsc --noEmit` passes clean under `strict`, `noUnusedLocals`
+and `verbatimModuleSyntax`; `vite build` succeeds (789 kB JS, 218 kB gzipped —
+mostly three.js, so the chunk-size warning is expected). The dev server runs and
+the game plays: a throw logged "Red threw 6 + 2 = 8" while the dice on screen
+showed exactly 6 and 2, which exercises the physics recording, the relabelling,
+the pip placement and the turn logic together.
+
+Versions and API surface were checked against the installed packages: `three`
+0.170.0 with a matching `@types/three` 0.170.0, `cannon-es` 0.20.0. The
+`three/examples/jsm/geometries/RoundedBoxGeometry.js` import is explicitly
+permitted by three's `exports` map and typed at that exact subpath.
+
+The dice logic was additionally verified by porting these modules into a
+standalone browser harness and exercising them directly at volumes the UI can't
+reach:
+
+**Correctness**
+
+- **Relabelling** — all 36 (resting-axis × target-value) combinations produce a
+  valid right-handed die, opposite faces summing to 7, with the target face up.
+  Zero mismatches against 1500 real physics resting orientations.
+- **Pip placement** — over 400 dice from 200 real throws, the pips counted in
+  *world space* above each die's centre always equalled the value claimed. This
+  covers the labeling, face bases, pip layouts and the physics resting axis
+  together, end to end.
+- **Fairness** — 600,000 draws gave χ² = 8.81 against uniform (df=5, critical
+  11.07). The same bytes without the rejection-sampling loop give χ² = 59.24,
+  i.e. decisively biased — that's why `rollFaces` discards bytes ≥ 252 rather
+  than just taking `byte % 6`. Outcomes through the full pipeline: χ² = 2.47.
+
+**Tuning** (each figure measured, not guessed)
+
+- 0.98ms per throw for one die, 2.47ms for two.
+- 6–10% of throws need one resimulation; **zero** failed to settle in 400 throws.
+- Resting faces are dead level (5th-percentile flatness 1.00000).
+- Dice settle near the middle of the table (mean x 0.33 on a ±2.6 table), in
+  1.67s on average.
+- Framing was checked by projecting all eight corners of every die on every frame
+  of 350 throws: no corner leaves the viewport at any aspect ratio from 2.4 down
+  to 1.1.
+
+The harness also caught four real bugs, all fixed: `fixedStep()` silently does
+nothing in a headless loop (it derives substeps from wall-clock time, so a tight
+loop advances the world by zero — the first probe's die just hung in the air);
+`getRandomValues` throws above 65536 bytes per call; the initial launch spacing
+let two dice start interpenetrating; and the first camera/launch pair clipped a
+die corner off-screen on 95% of throws, which a centre-only framing check had
+reported as fine.

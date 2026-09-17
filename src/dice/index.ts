@@ -1,0 +1,8 @@
+export { DiceTable, type DiceTableProps } from './DiceTable'
+export { useDiceRoll, type DiceTray } from './useDiceRoll'
+export { throwDice, readFrame, FPS, DIE_HALF, TABLE_HALF } from './physics'
+export type { Recording, DieOutcome } from './physics'
+export { rollFace, rollFaces, randomSeed, createRng } from './random'
+export { labelingWith, valueOnAxis, AXES, PIP_LAYOUT, faceBasis } from './labeling'
+export type { Labeling, Vec2, Vec3 } from './labeling'
+export { scheduleImpacts } from './sound'

@@ -1,0 +1,168 @@
+.race {
+  width: min(720px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.race__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.race__header h1 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #e8e3d6;
+}
+
+.race__toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: #9d968a;
+  cursor: pointer;
+}
+
+/* --- Track --------------------------------------------------------------- */
+
+.race__track {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.race__lane {
+  display: grid;
+  grid-template-columns: 48px 1fr 62px;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.race__lane-name {
+  font-weight: 600;
+}
+
+.race__lane-tiles {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  background: #211f1c;
+  box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.6);
+  overflow: visible;
+}
+
+.race__lane-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  opacity: 0.4;
+  transition: width 320ms cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+.race__token {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+  border-radius: 50%;
+  transform: translateY(-50%);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.5);
+  transition: left 320ms cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+.race__lane-score {
+  text-align: right;
+  color: #8e877b;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Table -------------------------------------------------------------- */
+
+/* The floor and rails exist only in the physics simulation — they are not
+   rendered — so the dice canvas is transparent and THIS background is the
+   surface the player sees them land on.
+
+   That makes the colour here load-bearing rather than decorative: the dice's
+   contact shadows are composited onto it, so its lightness decides how strongly
+   they read. The shadow catcher in DiceTable.tsx darkens whatever is behind it
+   by 38%, so on this near-black that is ~8 luma of contrast — subtle, but
+   legible next to the bright dice, and enough to ground them. A mid-tone (e.g.
+   the commented felt below, ~23 luma) or anything lighter makes it much more
+   pronounced. Going darker than this is where the dice start to look like they
+   are floating. */
+.race__table {
+  height: clamp(300px, 46vh, 420px);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #14161a;
+  /* background: linear-gradient(160deg, #3c4a3e, #2a3329); */
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.05), 0 10px 30px rgb(0 0 0 / 0.4);
+}
+
+.dice-table {
+  width: 100%;
+  height: 100%;
+}
+
+/* --- Controls ----------------------------------------------------------- */
+
+.race__controls {
+  display: flex;
+  justify-content: center;
+}
+
+.race__roll {
+  padding: 13px 30px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(#f0ece0, #d9d2c0);
+  color: #23211d;
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #a79f8c, 0 6px 16px rgb(0 0 0 / 0.35);
+  transition: transform 90ms ease, box-shadow 90ms ease;
+}
+
+.race__roll:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.race__roll:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #a79f8c, 0 3px 8px rgb(0 0 0 / 0.3);
+}
+
+.race__roll:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.race__status {
+  margin: 0;
+  text-align: center;
+  min-height: 1.2em;
+  color: #cfc8b9;
+  font-size: 14px;
+}
+
+.race__log {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  text-align: center;
+  font-size: 12.5px;
+  color: #7e776c;
+}
+
+.race__log li + li {
+  margin-top: 3px;
+}
