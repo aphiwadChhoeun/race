@@ -13,6 +13,42 @@ npm run dev
 Built on [cannon-es](https://github.com/pmndrs/cannon-es) for the physics and
 [three.js](https://threejs.org/) for the rendering.
 
+```bash
+npm test
+```
+
+## The game
+
+The race track runs `0…30` and the first player to reach or pass it wins. You
+never move by what you rolled, though — you move by what you successfully *bid*.
+
+Alongside the track sits a **bidding track** of seven slots labelled `0…6`. A
+slot's label is how far its occupant will move; each slot holds at most one bid.
+
+A turn is three steps:
+
+1. **Collect.** If your bid is still on the track, it pays out — move its slot
+   number of spaces, and the bid comes off. If someone evicted it first, you get
+   nothing.
+2. **Throw** two dice. Their **bid value** is the faces read high digit first,
+   so 3 and 5 both ways round is `53`. Values run `11`–`66`.
+3. **Place** the value on a legal empty slot. Every bid on a *higher* slot for a
+   *strictly lower* value is knocked off the track.
+
+That last clause is the whole game. Slot 6 pays the most and is the most
+exposed: it can be taken away by any bigger value placed anywhere beneath it.
+Slot 0 can never be evicted and is worth nothing — but occupying it denies
+everyone else the strongest outbidding position.
+
+A slot is **legal** only if it is empty *and* no lower slot holds a bigger
+value; landing somewhere that is already dead isn't allowed. Ties are safe in
+both directions, since eviction needs a strictly higher value. If a throw has
+nowhere legal to go, it is forfeited.
+
+The rules themselves are a pure module, [`bidding.ts`](src/game/bidding.ts),
+with the edge cases pinned down in [`bidding.test.ts`](src/game/bidding.test.ts).
+[`RaceGame.tsx`](src/game/RaceGame.tsx) is only the turn sequencing and the UI.
+
 ## The dice
 
 Everything dice-related lives in [`src/dice/`](src/dice/). Drop it into any React
