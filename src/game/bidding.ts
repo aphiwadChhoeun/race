@@ -1,3 +1,38 @@
+import type { Face } from '../dice'
+
+/**
+ * Both dice showing a cross on the opening throw: the strongest bid there is.
+ *
+ * Stored one above the `76` ceiling so it wins through the ordinary comparison
+ * in `legalSlots` and `placeBid` — those two know nothing about it. Rendered as
+ * `XX` by `bidLabel`, never as a number.
+ */
+export const DOUBLE_X = 77
+
+export type Roll = { kind: 'bust' } | { kind: 'bid'; value: number }
+
+/**
+ * What a throw is worth.
+ *
+ * The opening throw of a turn is safe: a cross on it is merely a zero digit,
+ * and two are a jackpot. Every throw after that is the gamble — one cross and
+ * the turn is over.
+ */
+export function resolveRoll(faces: Face[], isFirstRoll: boolean): Roll {
+  const crosses = faces.filter((face) => face === 'x').length
+
+  if (crosses > 0 && !isFirstRoll) return { kind: 'bust' }
+  if (crosses > 0 && crosses === faces.length) return { kind: 'bid', value: DOUBLE_X }
+
+  const digits = faces.map((face) => (face === 'x' ? 0 : face)).sort((a, b) => b - a)
+  return { kind: 'bid', value: digits[0] * 10 + digits[1] }
+}
+
+/** How a bid value is written on the board. */
+export function bidLabel(value: number): string {
+  return value === DOUBLE_X ? 'XX' : String(value)
+}
+
 /** Slots on the bidding track. A slot's index is how far its winner moves. */
 export const SLOTS = 7
 

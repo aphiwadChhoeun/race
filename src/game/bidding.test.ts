@@ -1,5 +1,15 @@
 import { describe, expect, test } from 'vitest'
-import { bidValue, collectBid, emptyBoard, legalSlots, placeBid, type Board } from './bidding'
+import {
+  DOUBLE_X,
+  bidLabel,
+  bidValue,
+  collectBid,
+  emptyBoard,
+  legalSlots,
+  placeBid,
+  resolveRoll,
+  type Board,
+} from './bidding'
 
 /** Builds a board from `{ slot: value }`, all bids owned by distinct players. */
 function board(bids: Record<number, number>): Board {
@@ -91,5 +101,64 @@ describe('collectBid', () => {
 
   test('reports no slot when the player was evicted', () => {
     expect(collectBid(board({ 0: 21 }), 5).slot).toBeNull()
+  })
+})
+
+describe('resolveRoll', () => {
+  test('reads an opening throw high digit first', () => {
+    expect(resolveRoll([5, 3], true)).toEqual({ kind: 'bid', value: 53 })
+  })
+
+  test('puts the higher digit first even when it is the second die', () => {
+    expect(resolveRoll([3, 7], true)).toEqual({ kind: 'bid', value: 73 })
+  })
+
+  test('counts a cross on the opening throw as zero', () => {
+    expect(resolveRoll([6, 'x'], true)).toEqual({ kind: 'bid', value: 60 })
+  })
+
+  test('counts a cross as zero whichever die shows it', () => {
+    expect(resolveRoll(['x', 4], true)).toEqual({ kind: 'bid', value: 40 })
+  })
+
+  test('makes two crosses on the opening throw the strongest bid in the game', () => {
+    expect(resolveRoll(['x', 'x'], true)).toEqual({ kind: 'bid', value: DOUBLE_X })
+  })
+
+  test('busts on a cross once the opening throw is past', () => {
+    expect(resolveRoll([6, 'x'], false)).toEqual({ kind: 'bust' })
+  })
+
+  test('busts on two crosses after the opening throw, with no jackpot', () => {
+    expect(resolveRoll(['x', 'x'], false)).toEqual({ kind: 'bust' })
+  })
+
+  test('scores a clean reroll normally', () => {
+    expect(resolveRoll([5, 7], false)).toEqual({ kind: 'bid', value: 75 })
+  })
+})
+
+describe('DOUBLE_X', () => {
+  test('outbids the highest ordinary value', () => {
+    expect(DOUBLE_X).toBeGreaterThan(76)
+  })
+
+  test('may be placed on any empty slot, since nothing can evict it', () => {
+    expect(legalSlots(board({ 2: 76 }), DOUBLE_X)).toEqual([0, 1, 3, 4, 5, 6])
+  })
+
+  test('knocks off every higher slot when placed low', () => {
+    const { evicted } = placeBid(board({ 4: 76, 6: 66 }), 1, DOUBLE_X, 9)
+    expect(evicted.map((bid) => bid.slot)).toEqual([4, 6])
+  })
+})
+
+describe('bidLabel', () => {
+  test('shows a double cross as XX rather than its numeric stand-in', () => {
+    expect(bidLabel(DOUBLE_X)).toBe('XX')
+  })
+
+  test('shows an ordinary value as its digits', () => {
+    expect(bidLabel(53)).toBe('53')
   })
 })
