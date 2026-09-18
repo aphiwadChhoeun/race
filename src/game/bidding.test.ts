@@ -2,7 +2,6 @@ import { describe, expect, test } from 'vitest'
 import {
   DOUBLE_X,
   bidLabel,
-  bidValue,
   collectBid,
   emptyBoard,
   legalSlots,
@@ -20,12 +19,6 @@ function board(bids: Record<number, number>): Board {
   }
   return next
 }
-
-describe('bidValue', () => {
-  test('reads the two dice high digit first', () => {
-    expect(bidValue([3, 5])).toBe(53)
-  })
-})
 
 describe('legalSlots', () => {
   test('offers every slot on an empty board', () => {

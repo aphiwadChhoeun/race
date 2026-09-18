@@ -1,6 +1,16 @@
 import { useCallback, useMemo, useState } from 'react'
-import { DiceTable, useDiceRoll } from '../dice'
-import { SLOTS, bidValue, collectBid, emptyBoard, legalSlots, placeBid, type Board } from './bidding'
+import { DiceTable, useDiceRoll, type Face } from '../dice'
+import {
+  SLOTS,
+  bidLabel,
+  collectBid,
+  emptyBoard,
+  legalSlots,
+  placeBid,
+  resolveRoll,
+  type Board,
+} from './bidding'
+import { DIE_COLORS, RACE_DICE } from './dice'
 import './race.css'
 
 const TRACK_LENGTH = 30
@@ -16,11 +26,13 @@ const INITIAL_PLAYERS: Player[] = [
   { name: 'Blue', position: 0, color: '#4c7fe2' },
 ]
 
-/** The dice have landed and the thrower owes the board a placement. */
+/** The dice have landed and the thrower owes the board a decision. */
 type Pending = {
   value: number
-  faces: number[]
+  faces: Face[]
   legal: number[]
+  /** Throws made this turn. The first is safe; a cross on any later one busts. */
+  throws: number
 }
 
 export function RaceGame() {
@@ -32,11 +44,40 @@ export function RaceGame() {
   const [log, setLog] = useState<string[]>(['Red to throw.'])
   const [muted, setMuted] = useState(false)
 
-  const { recording, playId, rolling, roll, settle } = useDiceRoll(2)
+  const { recording, playId, rolling, roll, settle } = useDiceRoll(RACE_DICE)
 
   const say = useCallback((...lines: string[]) => {
     setLog((previous) => [...lines, ...previous].slice(0, 6))
   }, [])
+
+  /**
+   * Throws, and either hands the player a decision or ends their turn.
+   *
+   * `throws` is the number of throws this turn *including* this one, so the
+   * opening throw passes 1 — the only throw on which a cross is survivable.
+   */
+  const throwDiceFor = useCallback(
+    async (current: number, currentBoard: Board, throws: number) => {
+      const mover = players[current].name
+      const faces = await roll()
+      const rolled = resolveRoll(faces, throws === 1)
+
+      if (rolled.kind === 'bust') {
+        say(`${mover} rerolled into a cross and busts — no bid.`)
+        setPending(null)
+        setTurn((current + 1) % players.length)
+        return
+      }
+
+      setPending({
+        value: rolled.value,
+        faces,
+        legal: legalSlots(currentBoard, rolled.value),
+        throws,
+      })
+    },
+    [players, roll, say],
+  )
 
   const takeTurn = useCallback(async () => {
     if (winner !== null || pending !== null) return
@@ -66,18 +107,20 @@ export function RaceGame() {
       say(`${mover} had no bid standing.`)
     }
 
-    const faces = await roll()
-    const value = bidValue(faces)
-    const legal = legalSlots(collected.board, value)
+    await throwDiceFor(current, collected.board, 1)
+  }, [board, pending, players, say, throwDiceFor, turn, winner])
 
-    if (legal.length === 0) {
-      say(`${mover} threw ${value} with nowhere legal to put it — bid lost.`)
-      setTurn((current + 1) % players.length)
-      return
-    }
+  const reroll = useCallback(async () => {
+    if (!pending || winner !== null) return
+    await throwDiceFor(turn, board, pending.throws + 1)
+  }, [board, pending, throwDiceFor, turn, winner])
 
-    setPending({ value, faces, legal })
-  }, [board, pending, players, roll, say, turn, winner])
+  const pass = useCallback(() => {
+    if (!pending) return
+    say(`${players[turn].name} gives up the throw — no bid.`)
+    setPending(null)
+    setTurn((turn + 1) % players.length)
+  }, [pending, players, say, turn])
 
   const choose = useCallback(
     (slot: number) => {
@@ -92,9 +135,10 @@ export function RaceGame() {
       setTurn((current + 1) % players.length)
       say(
         ...evicted.map(
-          (bid) => `${players[bid.player].name}'s ${bid.value} on ${bid.slot} is knocked off.`,
+          (bid) =>
+            `${players[bid.player].name}'s ${bidLabel(bid.value)} on ${bid.slot} is knocked off.`,
         ),
-        `${mover} bids ${pending.value} on slot ${slot}.`,
+        `${mover} bids ${bidLabel(pending.value)} on slot ${slot}.`,
       )
     },
     [board, pending, players, say, turn],
@@ -155,7 +199,7 @@ export function RaceGame() {
       <div className="race__bids">
         <h2 className="race__bids-title">
           {pending
-            ? `${active.name} threw ${pending.faces.join(' and ')} — place ${pending.value}`
+            ? `${active.name} threw ${pending.faces.join(' and ')} — place ${bidLabel(pending.value)}`
             : 'Bidding track'}
         </h2>
         <div className="race__bids-row">
@@ -172,7 +216,7 @@ export function RaceGame() {
                 disabled={!selectable}
                 aria-label={
                   bid
-                    ? `Slot ${slot}, ${players[bid.player].name} bidding ${bid.value}`
+                    ? `Slot ${slot}, ${players[bid.player].name} bidding ${bidLabel(bid.value)}`
                     : `Slot ${slot}, empty`
                 }
                 style={{
@@ -182,7 +226,7 @@ export function RaceGame() {
               >
                 <span className="race__slot-steps">{slot}</span>
                 <span className="race__slot-bid" style={{ color: owner?.color }}>
-                  {bid ? bid.value : selectable ? '+' : '—'}
+                  {bid ? bidLabel(bid.value) : selectable ? '+' : '—'}
                 </span>
               </button>
             )
@@ -196,6 +240,7 @@ export function RaceGame() {
           playId={playId}
           volume={muted ? 0 : 0.45}
           onSettle={settle}
+          dieColors={DIE_COLORS}
         />
       </div>
 
@@ -204,9 +249,20 @@ export function RaceGame() {
           <button className="race__roll" onClick={reset}>
             {players[winner].name} wins — play again
           </button>
+        ) : pending ? (
+          <>
+            <button className="race__roll" onClick={reroll} disabled={rolling}>
+              {rolling ? 'Rolling…' : 'Reroll (a cross busts)'}
+            </button>
+            {pending.legal.length === 0 && (
+              <button className="race__roll race__roll--quiet" onClick={pass} disabled={rolling}>
+                Give up the throw
+              </button>
+            )}
+          </>
         ) : (
-          <button className="race__roll" onClick={takeTurn} disabled={rolling || pending !== null}>
-            {rolling ? 'Rolling…' : pending ? `${active.name}: pick a slot` : `Throw for ${active.name}`}
+          <button className="race__roll" onClick={takeTurn} disabled={rolling}>
+            {rolling ? 'Rolling…' : `Throw for ${active.name}`}
           </button>
         )}
       </div>

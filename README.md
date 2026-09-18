@@ -25,13 +25,37 @@ never move by what you rolled, though — you move by what you successfully *bid
 Alongside the track sits a **bidding track** of seven slots labelled `0…6`. A
 slot's label is how far its occupant will move; each slot holds at most one bid.
 
+### The dice
+
+The two dice are not interchangeable:
+
+| Die | Faces |
+| --- | --- |
+| A | `1, 2, 3, X, 5, 6` |
+| B | `1, 2, 3, 4, X, 7` |
+
+Only B can roll a 4 or the game's single 7; only A can roll a 5 or 6. Each
+carries one `X`.
+
+A turn's **first** throw is safe: an `X` on it counts as zero, so A=6 with B=`X`
+bids `60`. Two X's on the first throw is `XX` — the strongest bid in the game,
+beaten by nothing.
+
+After that first throw you may **reroll as often as you like**, but any `X` on
+any later throw **busts**: your turn ends with no bid. A reroll throws both dice
+and busts 11/36 of the time, so roughly a third of the time you lose the bid you
+already had. That is the whole gamble.
+
+Busting does not undo the move you collected at the start of the turn — that bid
+was already won.
+
 A turn is three steps:
 
 1. **Collect.** If your bid is still on the track, it pays out — move its slot
    number of spaces, and the bid comes off. If someone evicted it first, you get
    nothing.
-2. **Throw** two dice. Their **bid value** is the faces read high digit first,
-   so 3 and 5 both ways round is `53`. Values run `11`–`66`.
+2. **Throw** both dice, then decide: place the value on a legal slot, reroll and
+   risk the bust, or — only if no slot is legal — give up the throw.
 3. **Place** the value on a legal empty slot. Every bid on a *higher* slot for a
    *strictly lower* value is knocked off the track.
 

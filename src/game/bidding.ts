@@ -111,9 +111,3 @@ export function collectBid(board: Board, player: number): { board: Board; slot: 
   next[slot] = null
   return { board: next, slot }
 }
-
-/** The value a pair of dice bids: the higher face first, so 3 and 5 read 53. */
-export function bidValue(faces: number[]): number {
-  const [high, low] = [...faces].sort((a, b) => b - a)
-  return high * 10 + low
-}

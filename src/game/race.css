@@ -228,3 +228,20 @@
 .race__log li + li {
   margin-top: 3px;
 }
+
+.race__controls {
+  gap: 10px;
+}
+
+/* The secondary choice at a dead end: available, but not the obvious click. */
+.race__roll--quiet {
+  background: none;
+  border: 1px solid #4a453c;
+  color: #9d968a;
+  box-shadow: none;
+}
+
+.race__roll--quiet:hover:not(:disabled) {
+  border-color: #6f6857;
+  color: #cfc8b9;
+}
