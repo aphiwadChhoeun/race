@@ -20,6 +20,10 @@ export function RaceGame({ roster, onExit }: RaceGameProps) {
   const { players, board, turn, pending, winner, log } = game
   const active = players[turn]
   const slots = useMemo(() => Array.from({ length: SLOTS }, (_, slot) => slot), [])
+  // Known at render time, unlike `aiThinking`, which is state set inside the
+  // AI effect and so lags `turn` by a commit — a gate on that state alone
+  // leaves controls live for one painted frame after the turn hands over.
+  const aiSeat = winner === null && active?.kind === 'ai'
 
   return (
     <div className="race">
@@ -84,7 +88,7 @@ export function RaceGame({ roster, onExit }: RaceGameProps) {
                 key={slot}
                 className="race__slot"
                 onClick={() => game.place(slot)}
-                disabled={!selectable || aiThinking}
+                disabled={!selectable || aiSeat}
                 aria-label={
                   bid
                     ? `Slot ${slot}, ${players[bid.player].name} bidding ${bidLabel(bid.value)}`
@@ -130,7 +134,7 @@ export function RaceGame({ roster, onExit }: RaceGameProps) {
             <button
               className="race__roll"
               onClick={game.reroll}
-              disabled={game.rolling || aiThinking}
+              disabled={game.rolling || aiSeat}
             >
               {game.rolling ? 'Rolling…' : 'Reroll (a cross busts)'}
             </button>
@@ -138,7 +142,7 @@ export function RaceGame({ roster, onExit }: RaceGameProps) {
               <button
                 className="race__roll race__roll--quiet"
                 onClick={game.pass}
-                disabled={game.rolling || aiThinking}
+                disabled={game.rolling || aiSeat}
               >
                 Give up the throw
               </button>
@@ -148,19 +152,22 @@ export function RaceGame({ roster, onExit }: RaceGameProps) {
           <button
             className="race__roll"
             onClick={game.startTurn}
-            disabled={game.rolling || aiThinking}
+            disabled={game.rolling || aiSeat}
           >
             {game.rolling ? 'Rolling…' : aiThinking ? `${active.name} is thinking…` : `Throw for ${active.name}`}
           </button>
         )}
       </div>
 
-      {/* Screen readers get the result announced once the dice have settled. */}
+      {/* Screen readers get the result announced once the dice have settled — for
+          an AI seat, the thinking state is prepended rather than replacing the
+          log, so a bid, eviction, bust or double is still announced during its
+          turn instead of only "thinking" for the whole thing. */}
       <p className="race__status" role="status">
         {game.rolling
           ? 'Rolling the dice.'
           : aiThinking
-            ? `${active.name} is thinking…`
+            ? `${active.name} is thinking… ${log[0]}`
             : log[0]}
       </p>
 

@@ -46,6 +46,12 @@ function seatPlayers(roster: Seat[]): Player[] {
  * is stale — so actions read from `live`, a mirror written synchronously
  * before each `setState`, and hand back what happened rather than expecting
  * the caller to go looking in state for it.
+ *
+ * `roster` is read once, at mount, to seed `players` and `log` via lazy
+ * initialisers — later changes to it are ignored for the life of this hook
+ * instance. That is only safe because the caller (`App.tsx`) unmounts
+ * `RaceGame` on exit rather than re-rendering it with a new roster; a caller
+ * that swapped seats in place would need to remount to pick them up.
  */
 export function useRaceGame(roster: Seat[]) {
   const [players, setPlayers] = useState<Player[]>(() => seatPlayers(roster))
@@ -204,7 +210,7 @@ export function useRaceGame(roster: Seat[]) {
   )
 
   const pass = useCallback(() => {
-    if (!live.current.pending) return
+    if (!live.current.pending || live.current.winner !== null) return
     say(`${live.current.players[live.current.turn].name} gives up the throw — no bid.`)
     endTurn()
   }, [endTurn, say])

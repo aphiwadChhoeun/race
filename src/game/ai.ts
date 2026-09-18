@@ -1,13 +1,15 @@
-import { legalSlots, placeBid, type Board } from './bidding'
+import { DOUBLE_X, legalSlots, placeBid, type Board } from './bidding'
 
 /**
  * The best value a reroll can produce.
  *
  * `XX` (77) beats everything, but only an opening throw can make one — after
  * that a cross busts. So 7 with 6 is the real ceiling, and a standing 76 is
- * unbeatable in practice even though a 77 would beat it on paper.
+ * unbeatable in practice even though a 77 would beat it on paper. Derived
+ * from `DOUBLE_X` rather than written as a bare 76, so the two stay in sync
+ * if the board's jackpot value ever changes.
  */
-export const MAX_REROLL_VALUE = 76
+export const MAX_REROLL_VALUE = DOUBLE_X - 1
 
 export type AiAction = { kind: 'place'; slot: number } | { kind: 'reroll' }
 

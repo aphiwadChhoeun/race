@@ -60,44 +60,49 @@ export function useAiTurns(game: Driveable): boolean {
     running.current = true
 
     const run = async () => {
-      setThinking(true)
-      await sleep(AI_PAUSE_MS)
-      // A click on the always-enabled "Lobby" button can unmount mid-pause;
-      // bail before touching a torn-down hook rather than firing a stale
-      // startTurn.
-      if (!alive.current) return
-
-      let outcome = await startTurn()
-      let placed = false
-
-      for (let rerolls = 0; rerolls < MAX_AI_REROLLS; rerolls++) {
-        if (!alive.current) return
-        if (outcome.kind !== 'decide') break
-
+      try {
+        setThinking(true)
         await sleep(AI_PAUSE_MS)
-        // Same as above: re-check after every await, not just at the top of
-        // the loop, so a mid-pause unmount can't wake this script back up.
+        // A click on the always-enabled "Lobby" button can unmount mid-pause;
+        // bail before touching a torn-down hook rather than firing a stale
+        // startTurn.
         if (!alive.current) return
 
-        const action = decideAi(outcome.board, outcome.value)
+        let outcome = await startTurn()
+        let placed = false
 
-        if (action.kind === 'place') {
-          place(action.slot)
-          placed = true
-          break
+        for (let rerolls = 0; rerolls < MAX_AI_REROLLS; rerolls++) {
+          if (!alive.current) return
+          if (outcome.kind !== 'decide') break
+
+          await sleep(AI_PAUSE_MS)
+          // Same as above: re-check after every await, not just at the top of
+          // the loop, so a mid-pause unmount can't wake this script back up.
+          if (!alive.current) return
+
+          const action = decideAi(outcome.board, outcome.value)
+
+          if (action.kind === 'place') {
+            place(action.slot)
+            placed = true
+            break
+          }
+          outcome = await reroll()
         }
-        outcome = await reroll()
-      }
 
-      // Exhausting MAX_AI_REROLLS without placing leaves the decision open —
-      // the spec treats that as a bust. Resolve it with the same action a
-      // human uses to give up the throw, so the turn actually ends.
-      if (!placed && outcome.kind === 'decide' && alive.current) {
-        pass()
+        // Exhausting MAX_AI_REROLLS without placing leaves the decision open —
+        // the spec treats that as a bust. Resolve it with the same action a
+        // human uses to give up the throw, so the turn actually ends.
+        if (!placed && outcome.kind === 'decide' && alive.current) {
+          pass()
+        }
+      } finally {
+        // Always release the guard, even if something above threw — otherwise
+        // `running` stays true forever and the AI never plays again, with
+        // every human control disabled and no recovery short of the lobby.
+        running.current = false
+        if (alive.current) setThinking(false)
       }
-
-      if (alive.current) setThinking(false)
-      running.current = false
     }
 
     void run()
