@@ -41,6 +41,10 @@ A turn's **first** throw is safe: an `X` on it counts as zero, so A=6 with B=`X`
 bids `60`. Two X's on the first throw is `XX` — the strongest bid in the game,
 beaten by nothing.
 
+Ordinary bid values run `10`–`76`, plus `XX`. That `10` floor is a non-obvious
+consequence of `X` counting as zero rather than being excluded: A=1 with B=`X`
+bids `10`, not `01`.
+
 After that first throw you may **reroll as often as you like**, but any `X` on
 any later throw **busts**: your turn ends with no bid. A reroll throws both dice
 and busts 11/36 of the time, so roughly a third of the time you lose the bid you
@@ -67,13 +71,13 @@ everyone else the strongest outbidding position.
 A slot is **legal** only if it is empty *and* no lower slot holds a bigger
 value; landing somewhere that is already dead isn't allowed. Ties are safe in
 both directions, since eviction needs a strictly higher value. If a throw has
-nowhere legal to go, it is forfeited.
+nowhere legal to go you may reroll it, or give it up for nothing.
 
 The rules themselves are a pure module, [`bidding.ts`](src/game/bidding.ts),
 with the edge cases pinned down in [`bidding.test.ts`](src/game/bidding.test.ts).
 [`RaceGame.tsx`](src/game/RaceGame.tsx) is only the turn sequencing and the UI.
 
-## The dice
+## The dice module
 
 Everything dice-related lives in [`src/dice/`](src/dice/). Drop it into any React
 app:
@@ -102,6 +106,7 @@ function Turn() {
 
 | File | Role |
 | --- | --- |
+| [`faces.ts`](src/dice/faces.ts) | What a die's faces show, and the dice-signature helper |
 | [`random.ts`](src/dice/random.ts) | Fair outcomes (CSPRNG) and seeded throw variation |
 | [`labeling.ts`](src/dice/labeling.ts) | Cube symmetries — how a fair RNG and real physics coexist |
 | [`physics.ts`](src/dice/physics.ts) | Headless simulation, recorded as a transform track |
@@ -181,16 +186,16 @@ remove the catcher block in `DiceTable.tsx` and set `shadowMap.enabled = false`.
 - An interrupted throw shows the outcome it was heading for and still reports the
   settle, so state and pixels never disagree and the tray can't get stuck.
 - Pressing Throw mid-roll is ignored rather than restarting — that would let a
-  player reroll.
+  player reroll for free.
 
 ## Verification
 
 **Build and run:** `tsc --noEmit` passes clean under `strict`, `noUnusedLocals`
 and `verbatimModuleSyntax`; `vite build` succeeds (789 kB JS, 218 kB gzipped —
 mostly three.js, so the chunk-size warning is expected). The dev server runs and
-the game plays: a throw logged "Red threw 6 + 2 = 8" while the dice on screen
-showed exactly 6 and 2, which exercises the physics recording, the relabelling,
-the pip placement and the turn logic together.
+the game plays: a throw logged "Red threw 6 and 2 — place 62" while the dice on
+screen showed exactly 6 and 2, which exercises the physics recording, the
+relabelling, the pip placement and the turn logic together.
 
 Versions and API surface were checked against the installed packages: `three`
 0.170.0 with a matching `@types/three` 0.170.0, `cannon-es` 0.20.0. The
