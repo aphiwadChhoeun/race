@@ -38,7 +38,13 @@
 
 .race__lane {
   display: grid;
-  grid-template-columns: 48px 1fr 62px;
+  /* Fixed, not max-content: each `.race__lane` is its own grid (the track is
+     a flex column of rows, not a shared grid), so a content-sized first
+     column sizes independently per lane and staggers every bar's left edge
+     by however much its name+badge varies — measured at 18px across a
+     6-seat roster. A fixed width wide enough for the longest name plus the
+     AI badge (measured 66px for "Amber" + badge) keeps every bar flush. */
+  grid-template-columns: 70px 1fr 62px;
   align-items: center;
   gap: 12px;
   font-size: 13px;

@@ -1,6 +1,6 @@
 # Race
 
-A two-player dice race with a real rigid-body physics simulation behind the dice.
+A 3–6 player dice race with a real rigid-body physics simulation behind the dice.
 
 ```bash
 npm install
@@ -94,7 +94,9 @@ nowhere legal to go you may reroll it, or give it up for nothing.
 
 The rules themselves are a pure module, [`bidding.ts`](src/game/bidding.ts),
 with the edge cases pinned down in [`bidding.test.ts`](src/game/bidding.test.ts).
-[`RaceGame.tsx`](src/game/RaceGame.tsx) is only the turn sequencing and the UI.
+[`RaceGame.tsx`](src/game/RaceGame.tsx) only renders; game state and turn
+actions live in [`useRaceGame.ts`](src/game/useRaceGame.ts), and the AI turn
+driver lives in [`useAiTurns.ts`](src/game/useAiTurns.ts).
 
 ## Players
 
