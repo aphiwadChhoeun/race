@@ -1,6 +1,7 @@
 import * as CANNON from 'cannon-es'
 import { createRng, range, rollFaces } from './random'
 import { AXES, labelingWith, type Labeling, type Vec3 } from './labeling'
+import { faceOf, type DieFaces, type Face } from './faces'
 
 /**
  * Real rigid-body simulation, run headless and recorded.
@@ -48,14 +49,18 @@ const MIN_FLATNESS = 0.98
 const MAX_ATTEMPTS = 24
 
 export type DieOutcome = {
-  /** The value showing when the dice stop — decided by the CSPRNG, not here. */
-  value: number
-  /** Which value sits on each local face, for the renderer to place pips. */
+  /** Which of the die's six faces landed up — decided by the CSPRNG, not here. */
+  faceId: number
+  /** What that face id shows on the die that rolled it. */
+  face: Face
+  /** Which face id sits on each local axis, for the renderer to dress. */
   labeling: Labeling
 }
 
 export type Recording = {
   dieCount: number
+  /** The dice this throw was made with, in order. */
+  dice: readonly DieFaces[]
   frameCount: number
   /** Seconds. */
   duration: number
@@ -196,9 +201,10 @@ function isStill(dice: CANNON.Body[]): boolean {
  * motion recorded. Simulations are only rejected for settling badly — never for
  * the number they produced.
  */
-export function throwDice(count: number, seed: number): Recording {
-  const faces = rollFaces(count)
-  const { world, dice } = getSimulator(count)
+export function throwDice(dice: readonly DieFaces[], seed: number): Recording {
+  const count = dice.length
+  const faceIds = rollFaces(count)
+  const { world, dice: bodies } = getSimulator(count)
 
   // Generous upper bound; the buffer is sliced to the real length at the end.
   const capacity = Math.ceil(MAX_STEPS / STEPS_PER_FRAME) + 2
@@ -234,9 +240,9 @@ export function throwDice(count: number, seed: number): Recording {
       impacts.push({ time: time * 1000, strength: Math.min(1, speed / 7) })
     }
 
-    for (const body of dice) body.addEventListener('collide', onCollide)
+    for (const body of bodies) body.addEventListener('collide', onCollide)
 
-    launch(dice, rng)
+    launch(bodies, rng)
     // Clear contacts carried over from the previous attempt's resting pose.
     world.contacts.length = 0
 
@@ -249,7 +255,7 @@ export function throwDice(count: number, seed: number): Recording {
       if (stepIndex % STEPS_PER_FRAME === 0) {
         const base = frameCount * count * 7
         for (let d = 0; d < count; d++) {
-          const body = dice[d]
+          const body = bodies[d]
           const o = base + d * 7
           scratchTrack[o] = body.position.x
           scratchTrack[o + 1] = body.position.y
@@ -262,17 +268,17 @@ export function throwDice(count: number, seed: number): Recording {
         frameCount++
       }
 
-      if (stepIndex > 60 && isStill(dice)) {
+      if (stepIndex > 60 && isStill(bodies)) {
         settledAt = stepIndex
         break
       }
     }
 
-    for (const body of dice) body.removeEventListener('collide', onCollide)
+    for (const body of bodies) body.removeEventListener('collide', onCollide)
 
-    const ups = dice.map(restingUp)
+    const ups = bodies.map(restingUp)
     const worstFlatness = Math.min(...ups.map((u) => u.flatness))
-    const onTable = dice.every(
+    const onTable = bodies.every(
       (b) =>
         Math.abs(b.position.x) < TABLE_HALF + 1 &&
         Math.abs(b.position.z) < TABLE_HALF + 1 &&
@@ -303,12 +309,14 @@ export function throwDice(count: number, seed: number): Recording {
   // its nearest local axis is unambiguously the one pointing up. Label the die
   // to put the RNG's value on that face.
   const outcomes: DieOutcome[] = chosen.ups.map((up, index) => ({
-    value: faces[index],
-    labeling: labelingWith(up.axis, faces[index]),
+    faceId: faceIds[index],
+    face: faceOf(dice[index], faceIds[index]),
+    labeling: labelingWith(up.axis, faceIds[index]),
   }))
 
   return {
     dieCount: count,
+    dice,
     frameCount: chosen.frameCount,
     duration: chosen.frameCount / FPS,
     track: chosen.track,

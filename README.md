@@ -55,14 +55,16 @@ Everything dice-related lives in [`src/dice/`](src/dice/). Drop it into any Reac
 app:
 
 ```tsx
-import { DiceTable, useDiceRoll } from './dice'
+import { DiceTable, useDiceRoll, STANDARD_DIE } from './dice'
+
+const DICE = [STANDARD_DIE, STANDARD_DIE]
 
 function Turn() {
-  const { recording, playId, rolling, roll, settle } = useDiceRoll(2)
+  const { recording, playId, rolling, roll, settle } = useDiceRoll(DICE)
 
   const takeTurn = async () => {
     const faces = await roll() // resolves when the dice stop moving
-    advance(faces[0] + faces[1])
+    score(faces)               // Face[] — a number, or 'x' on a custom die
   }
 
   return (
