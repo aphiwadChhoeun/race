@@ -245,3 +245,37 @@
   border-color: #6f6857;
   color: #cfc8b9;
 }
+
+.race__header-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.race__exit {
+  padding: 5px 12px;
+  border: 1px solid #4a453c;
+  border-radius: 7px;
+  background: none;
+  color: #9d968a;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.race__exit:hover {
+  border-color: #6f6857;
+  color: #cfc8b9;
+}
+
+/* Marks an AI seat on the track, so you always know who is playing itself. */
+.race__lane-tag {
+  margin-left: 5px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: #2f2c27;
+  color: #8e877b;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  vertical-align: middle;
+}
