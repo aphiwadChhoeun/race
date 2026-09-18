@@ -21,6 +21,7 @@ type Driveable = {
   startTurn: () => Promise<TurnOutcome>
   reroll: () => Promise<TurnOutcome>
   place: (slot: number) => void
+  pass: () => void
 }
 
 /**
@@ -50,7 +51,7 @@ export function useAiTurns(game: Driveable): boolean {
     }
   }, [])
 
-  const { players, turn, winner, startTurn, reroll, place } = game
+  const { players, turn, winner, startTurn, reroll, place, pass } = game
   const seatKind = players[turn]?.kind
   const over = winner !== null
 
@@ -61,28 +62,46 @@ export function useAiTurns(game: Driveable): boolean {
     const run = async () => {
       setThinking(true)
       await sleep(AI_PAUSE_MS)
+      // A click on the always-enabled "Lobby" button can unmount mid-pause;
+      // bail before touching a torn-down hook rather than firing a stale
+      // startTurn.
+      if (!alive.current) return
 
       let outcome = await startTurn()
+      let placed = false
 
       for (let rerolls = 0; rerolls < MAX_AI_REROLLS; rerolls++) {
-        if (!alive.current || outcome.kind !== 'decide') break
+        if (!alive.current) return
+        if (outcome.kind !== 'decide') break
 
         await sleep(AI_PAUSE_MS)
+        // Same as above: re-check after every await, not just at the top of
+        // the loop, so a mid-pause unmount can't wake this script back up.
+        if (!alive.current) return
+
         const action = decideAi(outcome.board, outcome.value)
 
         if (action.kind === 'place') {
           place(action.slot)
+          placed = true
           break
         }
         outcome = await reroll()
       }
 
-      setThinking(false)
+      // Exhausting MAX_AI_REROLLS without placing leaves the decision open —
+      // the spec treats that as a bust. Resolve it with the same action a
+      // human uses to give up the throw, so the turn actually ends.
+      if (!placed && outcome.kind === 'decide' && alive.current) {
+        pass()
+      }
+
+      if (alive.current) setThinking(false)
       running.current = false
     }
 
     void run()
-  }, [turn, seatKind, over, place, reroll, startTurn])
+  }, [turn, seatKind, over, place, reroll, startTurn, pass])
 
   return thinking
 }
