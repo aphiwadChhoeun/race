@@ -195,7 +195,7 @@ function isStill(dice: CANNON.Body[]): boolean {
 }
 
 /**
- * Throws `count` dice.
+ * Throws `dice`.
  *
  * The faces are drawn from the CSPRNG first, then a simulation is run and its
  * motion recorded. Simulations are only rejected for settling badly — never for
@@ -307,7 +307,7 @@ export function throwDice(dice: readonly DieFaces[], seed: number): Recording {
 
   // The flatness gate means each die is already resting square to the floor, so
   // its nearest local axis is unambiguously the one pointing up. Label the die
-  // to put the RNG's value on that face.
+  // to put the RNG's faceId on that face.
   const outcomes: DieOutcome[] = chosen.ups.map((up, index) => ({
     faceId: faceIds[index],
     face: faceOf(dice[index], faceIds[index]),

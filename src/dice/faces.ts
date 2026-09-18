@@ -30,3 +30,13 @@ export function pipCount(face: Face): number {
 export function pipTotal(die: DieFaces): number {
   return die.reduce<number>((sum, face) => sum + pipCount(face), 0)
 }
+
+/**
+ * A string that changes exactly when the *faces* of a set of dice change.
+ * Used to key a rebuild (of the throw itself, or of the meshes drawn for it)
+ * off content rather than count — comparing die count alone is not enough
+ * once pool sizes depend on face content.
+ */
+export function diceSignature(dice: readonly DieFaces[]): string {
+  return dice.map((die) => die.join(',')).join('|')
+}

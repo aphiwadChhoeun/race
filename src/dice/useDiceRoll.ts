@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { randomSeed } from './random'
 import { throwDice, type Recording } from './physics'
-import type { DieFaces, Face } from './faces'
+import { diceSignature, type DieFaces, type Face } from './faces'
 
 export type DiceTray = {
   /** The recording currently on the table. */
@@ -16,11 +16,6 @@ export type DiceTray = {
   roll: () => Promise<Face[]>
   /** Pass to `<DiceTable onSettle>`. */
   settle: () => void
-}
-
-/** Identifies a set of dice by their faces, so inline specs don't re-throw. */
-function signature(dice: readonly DieFaces[]): string {
-  return dice.map((die) => die.join(',')).join('|')
 }
 
 /**
@@ -52,10 +47,10 @@ export function useDiceRoll(dice: readonly DieFaces[]): DiceTray {
   // inline array literal creates a new reference every render, which against a
   // reference comparison would re-throw the dice forever. `dice` is read inside
   // but deliberately not a dependency — `id` already covers every change to it.
-  const id = signature(dice)
+  const id = diceSignature(dice)
   useEffect(() => {
     setState((previous) => {
-      if (signature(previous.recording.dice) === id) return previous
+      if (diceSignature(previous.recording.dice) === id) return previous
       const recording = throwDice(dice, randomSeed())
       facesRef.current = recording.outcomes.map((o) => o.face)
       return { recording, playId: 0 }

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
-import { pipTotal, type DieFaces, type Face } from './faces'
+import { diceSignature, pipTotal, type DieFaces, type Face } from './faces'
 import { AXES, PIP_LAYOUT, faceBasis, type Labeling } from './labeling'
 import { DIE_HALF, FPS, TABLE_HALF, readFrame, type Recording } from './physics'
 import { scheduleImpacts } from './sound'
@@ -27,6 +27,9 @@ const BARS_PER_CROSS = 2
 
 type DieView = {
   group: THREE.Group
+  /** The die's body material, kept reachable so a colour change can recolour
+   *  it in place without rebuilding the die (see the recolour effect below). */
+  bodyMaterial: THREE.MeshStandardMaterial
   pips: THREE.Mesh[]
   bars: THREE.Mesh[]
 }
@@ -36,7 +39,7 @@ type Stage = {
   scene: THREE.Scene
   camera: THREE.PerspectiveCamera
   dice: DieView[]
-  /** Signature of the dice specs + colours the current `dice` were built for. */
+  /** Signature of the dice faces the current `dice` were built for. */
   diceKey: string
   dieGeometry: THREE.BufferGeometry
   pipGeometry: THREE.BufferGeometry
@@ -47,18 +50,6 @@ type Stage = {
    *  (e.g. the shadow catcher) that also live in `materials`. */
   diceMaterials: THREE.Material[]
   disposed: boolean
-}
-
-/**
- * A string that changes exactly when the dice a stage was built for change —
- * either which faces each die shows, or what colour it's painted. Mirrors the
- * `signature()` helper in `useDiceRoll.ts`: comparing die *count* alone (the
- * previous guard) is not enough once pool sizes depend on face content.
- */
-function diceSignature(dice: readonly DieFaces[], dieColors?: number[]): string {
-  const facesKey = dice.map((die) => die.join(',')).join('|')
-  const colorsKey = dieColors?.join(',') ?? ''
-  return `${facesKey}::${colorsKey}`
 }
 
 export type DiceTableProps = {
@@ -211,11 +202,11 @@ export function DiceTable({ recording, playId, volume = 0.45, onSettle, dieColor
     }
   }, [])
 
-  // --- Dice: rebuilt only when the dice themselves (faces or colours) change --
+  // --- Dice: rebuilt only when the dice themselves (which faces they show) change --
   useEffect(() => {
     const stage = stageRef.current
     if (!stage || !recording) return
-    const key = diceSignature(recording.dice, dieColors)
+    const key = diceSignature(recording.dice)
     if (stage.diceKey === key) return
     stage.diceKey = key
 
@@ -251,8 +242,11 @@ export function DiceTable({ recording, playId, volume = 0.45, onSettle, dieColor
 
     for (let i = 0; i < recording.dieCount; i++) {
       const faces = recording.dice[i]
+      // Bone white by default; the recolour effect below sets the real colour
+      // (including on this freshly built material) immediately after this
+      // effect runs.
       const bodyMaterial = new THREE.MeshStandardMaterial({
-        color: dieColors?.[i] ?? 0xf4eee2,
+        color: 0xf4eee2,
         roughness: 0.34,
         metalness: 0.02,
       })
@@ -284,8 +278,25 @@ export function DiceTable({ recording, playId, volume = 0.45, onSettle, dieColor
       }
 
       stage.scene.add(group)
-      stage.dice.push({ group, pips, bars })
+      stage.dice.push({ group, bodyMaterial, pips, bars })
     }
+  }, [recording])
+
+  // --- Colour: recoloured in place whenever the body colours change -------
+  //
+  // A colour change needs no new geometry, so it must not go through the
+  // construction effect above: rebuilding would tear down and redress every
+  // pip and bar mesh for a change that only ever touches the body material.
+  // This also has to run after a rebuild (construction effect, above) so a
+  // freshly built die — still wearing its bone-white default — gets painted;
+  // depending on `recording` as well as `dieColors` guarantees that, since a
+  // rebuild only ever happens when `recording` itself has just changed.
+  useEffect(() => {
+    const stage = stageRef.current
+    if (!stage) return
+    stage.dice.forEach((die, index) => {
+      die.bodyMaterial.color.set(dieColors?.[index] ?? 0xf4eee2)
+    })
   }, [recording, dieColors])
 
   // --- Pips: repositioned whenever the labeling changes -------------------
