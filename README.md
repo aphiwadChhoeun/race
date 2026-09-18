@@ -96,6 +96,25 @@ The rules themselves are a pure module, [`bidding.ts`](src/game/bidding.ts),
 with the edge cases pinned down in [`bidding.test.ts`](src/game/bidding.test.ts).
 [`RaceGame.tsx`](src/game/RaceGame.tsx) is only the turn sequencing and the UI.
 
+## Players
+
+Three to six seats, each human or AI, chosen in the lobby before a race.
+
+An AI seat plays the same rules with one strategy: if anything on the board can
+be outbid, it rerolls until it can outbid it, then takes the **highest** slot
+that knocks someone off. If nothing can be outbid — an empty track, or a board
+whose only bids are unreachable — it settles for the highest legal slot.
+
+"Unreachable" is doing real work there. A bid on slot 0 can never be evicted,
+because outbidding needs a *lower* slot and none exists. Neither can a standing
+`76`, because beating it needs `77`, and `77` is `XX`, which a reroll can never
+produce. Without treating both as nothing-to-chase, an AI would reroll into a
+bust every turn for as long as such a bid stood.
+
+The strategy is deliberately aggressive: rerolling busts on 11/36, so an AI
+that cannot outbid will often end its turn with nothing. It still banks any
+doubles it rolls on the way.
+
 ## The dice module
 
 Everything dice-related lives in [`src/dice/`](src/dice/). Drop it into any React
