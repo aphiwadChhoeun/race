@@ -4,6 +4,7 @@ import { SLOTS, bidLabel, faceLabel } from './bidding'
 import { DIE_COLORS } from './dice'
 import type { Seat } from './seats'
 import { TRACK_LENGTH, useRaceGame } from './useRaceGame'
+import { useAiTurns } from './useAiTurns'
 import './race.css'
 
 export type RaceGameProps = {
@@ -13,6 +14,7 @@ export type RaceGameProps = {
 
 export function RaceGame({ roster, onExit }: RaceGameProps) {
   const game = useRaceGame(roster)
+  const aiThinking = useAiTurns(game)
   const [muted, setMuted] = useState(false)
 
   const { players, board, turn, pending, winner, log } = game
@@ -82,7 +84,7 @@ export function RaceGame({ roster, onExit }: RaceGameProps) {
                 key={slot}
                 className="race__slot"
                 onClick={() => game.place(slot)}
-                disabled={!selectable}
+                disabled={!selectable || aiThinking}
                 aria-label={
                   bid
                     ? `Slot ${slot}, ${players[bid.player].name} bidding ${bidLabel(bid.value)}`
@@ -125,29 +127,41 @@ export function RaceGame({ roster, onExit }: RaceGameProps) {
           </>
         ) : pending ? (
           <>
-            <button className="race__roll" onClick={game.reroll} disabled={game.rolling}>
+            <button
+              className="race__roll"
+              onClick={game.reroll}
+              disabled={game.rolling || aiThinking}
+            >
               {game.rolling ? 'Rolling…' : 'Reroll (a cross busts)'}
             </button>
             {pending.legal.length === 0 && (
               <button
                 className="race__roll race__roll--quiet"
                 onClick={game.pass}
-                disabled={game.rolling}
+                disabled={game.rolling || aiThinking}
               >
                 Give up the throw
               </button>
             )}
           </>
         ) : (
-          <button className="race__roll" onClick={game.startTurn} disabled={game.rolling}>
-            {game.rolling ? 'Rolling…' : `Throw for ${active.name}`}
+          <button
+            className="race__roll"
+            onClick={game.startTurn}
+            disabled={game.rolling || aiThinking}
+          >
+            {game.rolling ? 'Rolling…' : aiThinking ? `${active.name} is thinking…` : `Throw for ${active.name}`}
           </button>
         )}
       </div>
 
       {/* Screen readers get the result announced once the dice have settled. */}
       <p className="race__status" role="status">
-        {game.rolling ? 'Rolling the dice.' : log[0]}
+        {game.rolling
+          ? 'Rolling the dice.'
+          : aiThinking
+            ? `${active.name} is thinking…`
+            : log[0]}
       </p>
 
       <ul className="race__log">
