@@ -50,16 +50,35 @@ any later throw **busts**: your turn ends with no bid. A reroll throws both dice
 and busts 11/36 of the time, so roughly a third of the time you lose the bid you
 already had. That is the whole gamble.
 
-Busting does not undo the move you collected at the start of the turn — that bid
-was already won.
+### Doubles
+
+Two dice showing the same **number** move you that many spaces immediately, on
+any throw, and you still bid the value afterwards — a double is a pure bonus.
+Roll `3,3` and you move 3, then place `33` or reroll as usual.
+
+Only `1,1`, `2,2` and `3,3` exist. The dice share no other value: die A has no
+4 and no 7, die B has no 5 and no 6. So a double is worth 1–3 spaces and turns
+up on 3 throws in 36. Two crosses are never a move — on an opening throw they
+are the `XX` jackpot, and on any later throw they are a bust.
+
+Because doubles pay on rerolls too, a lucky streak chains: move 2, reroll, move
+3, reroll. Every extra throw is another 1-in-12 shot at free ground against the
+11/36 bust — which is what makes the reroll a real decision rather than a
+formality.
+
+Moves are **banked**. Neither busting nor giving up the throw takes back the
+spaces you collected at the start of the turn or won from a double — those were
+already yours. A double can win the game outright: reach 30 and the turn stops
+there, bid or no bid.
 
 A turn is three steps:
 
 1. **Collect.** If your bid is still on the track, it pays out — move its slot
    number of spaces, and the bid comes off. If someone evicted it first, you get
    nothing.
-2. **Throw** both dice, then decide: place the value on a legal slot, reroll and
-   risk the bust, or — only if no slot is legal — give up the throw.
+2. **Throw** both dice. A double moves you its value straight away. Then
+   decide: place the value on a legal slot, reroll and risk the bust, or — only
+   if no slot is legal — give up the throw.
 3. **Place** the value on a legal empty slot. Every bid on a *higher* slot for a
    *strictly lower* value is knocked off the track.
 

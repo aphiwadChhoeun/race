@@ -4,6 +4,7 @@ import {
   SLOTS,
   bidLabel,
   collectBid,
+  doubleBonus,
   emptyBoard,
   faceLabel,
   legalSlots,
@@ -56,9 +57,13 @@ export function RaceGame() {
    *
    * `throws` is the number of throws this turn *including* this one, so the
    * opening throw passes 1 — the only throw on which a cross is survivable.
+   *
+   * `currentPosition` is passed in rather than read from state for the same
+   * reason `currentBoard` is: a caller may have just moved this player, and
+   * that write has not landed yet.
    */
   const throwDiceFor = useCallback(
-    async (current: number, currentBoard: Board, throws: number) => {
+    async (current: number, currentBoard: Board, currentPosition: number, throws: number) => {
       const mover = players[current].name
       const faces = await roll()
       const rolled = resolveRoll(faces, throws === 1)
@@ -68,6 +73,28 @@ export function RaceGame() {
         setPending(null)
         setTurn((current + 1) % players.length)
         return
+      }
+
+      // A matching pair of numbers pays its value in spaces before any bidding
+      // happens, and the bid goes ahead as well — the move is a pure bonus.
+      // Those spaces are banked: busting on a later throw never takes them back.
+      const bonus = doubleBonus(faces)
+      if (bonus > 0) {
+        const position = Math.min(TRACK_LENGTH, currentPosition + bonus)
+        setPlayers((previous) =>
+          previous.map((player, index) => (index === current ? { ...player, position } : player)),
+        )
+
+        if (position >= TRACK_LENGTH) {
+          setWinner(current)
+          // Clear the decision: a reroll leaves one standing, and a won game
+          // must not leave the board still offering slots to place on.
+          setPending(null)
+          say(`${mover} threw double ${bonus} and reaches ${TRACK_LENGTH} — ${mover} wins!`)
+          return
+        }
+
+        say(`${mover} threw double ${bonus} and moves to ${position}.`)
       }
 
       setPending({
@@ -91,8 +118,10 @@ export function RaceGame() {
     const collected = collectBid(board, current)
     setBoard(collected.board)
 
+    let position = players[current].position
+
     if (collected.slot !== null) {
-      const position = Math.min(TRACK_LENGTH, players[current].position + collected.slot)
+      position = Math.min(TRACK_LENGTH, position + collected.slot)
       setPlayers((previous) =>
         previous.map((player, index) => (index === current ? { ...player, position } : player)),
       )
@@ -108,13 +137,13 @@ export function RaceGame() {
       say(`${mover} had no bid standing.`)
     }
 
-    await throwDiceFor(current, collected.board, 1)
+    await throwDiceFor(current, collected.board, position, 1)
   }, [board, pending, players, say, throwDiceFor, turn, winner])
 
   const reroll = useCallback(async () => {
     if (!pending || winner !== null) return
-    await throwDiceFor(turn, board, pending.throws + 1)
-  }, [board, pending, throwDiceFor, turn, winner])
+    await throwDiceFor(turn, board, players[turn].position, pending.throws + 1)
+  }, [board, pending, players, throwDiceFor, turn, winner])
 
   const pass = useCallback(() => {
     if (!pending) return
@@ -125,7 +154,7 @@ export function RaceGame() {
 
   const choose = useCallback(
     (slot: number) => {
-      if (!pending || !pending.legal.includes(slot)) return
+      if (!pending || winner !== null || !pending.legal.includes(slot)) return
 
       const current = turn
       const mover = players[current].name
@@ -142,7 +171,7 @@ export function RaceGame() {
         `${mover} bids ${bidLabel(pending.value)} on slot ${slot}.`,
       )
     },
-    [board, pending, players, say, turn],
+    [board, pending, players, say, turn, winner],
   )
 
   const reset = () => {

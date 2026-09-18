@@ -3,6 +3,7 @@ import {
   DOUBLE_X,
   bidLabel,
   collectBid,
+  doubleBonus,
   emptyBoard,
   faceLabel,
   legalSlots,
@@ -178,5 +179,29 @@ describe('RACE_DICE', () => {
     // bid — a silent, undetectable collision with the double-cross jackpot.
     const sevens = RACE_DICE.flatMap((die) => die).filter((face) => face === 7)
     expect(sevens).toHaveLength(1)
+  })
+})
+
+describe('doubleBonus', () => {
+  test('pays the face value when both dice show the same number', () => {
+    expect(doubleBonus([3, 3])).toBe(3)
+  })
+
+  test('pays the smaller doubles too', () => {
+    expect(doubleBonus([1, 1])).toBe(1)
+    expect(doubleBonus([2, 2])).toBe(2)
+  })
+
+  test('pays nothing for two crosses, which are a jackpot or a bust, never a move', () => {
+    expect(doubleBonus(['x', 'x'])).toBe(0)
+  })
+
+  test('pays nothing when the dice differ', () => {
+    expect(doubleBonus([5, 3])).toBe(0)
+  })
+
+  test('pays nothing when only one die is a cross', () => {
+    expect(doubleBonus([3, 'x'])).toBe(0)
+    expect(doubleBonus(['x', 4])).toBe(0)
   })
 })

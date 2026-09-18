@@ -28,6 +28,23 @@ export function resolveRoll(faces: Face[], isFirstRoll: boolean): Roll {
   return { kind: 'bid', value: digits[0] * 10 + digits[1] }
 }
 
+/**
+ * Spaces a throw moves its thrower for free, before any bidding.
+ *
+ * Two dice showing the same *number* pay that number. Two crosses never do:
+ * on an opening throw they are the `XX` jackpot and on any later throw they
+ * are a bust, so a cross is worth no movement either way. A bust and a paying
+ * double are therefore mutually exclusive — a bust needs a cross present.
+ *
+ * With the game's dice this can only ever be 1, 2 or 3: those are the only
+ * values die A and die B share.
+ */
+export function doubleBonus(faces: Face[]): number {
+  const [first, second] = faces
+  if (first === 'x' || first !== second) return 0
+  return first
+}
+
 /** How a bid value is written on the board. */
 export function bidLabel(value: number): string {
   return value === DOUBLE_X ? 'XX' : String(value)
