@@ -4,11 +4,13 @@ import {
   bidLabel,
   collectBid,
   emptyBoard,
+  faceLabel,
   legalSlots,
   placeBid,
   resolveRoll,
   type Board,
 } from './bidding'
+import { RACE_DICE } from './dice'
 
 /** Builds a board from `{ slot: value }`, all bids owned by distinct players. */
 function board(bids: Record<number, number>): Board {
@@ -153,5 +155,28 @@ describe('bidLabel', () => {
 
   test('shows an ordinary value as its digits', () => {
     expect(bidLabel(53)).toBe('53')
+  })
+})
+
+describe('faceLabel', () => {
+  test('upper-cases the bust mark', () => {
+    expect(faceLabel('x')).toBe('X')
+  })
+
+  test('stringifies a numeric face', () => {
+    expect(faceLabel(5)).toBe('5')
+  })
+})
+
+describe('RACE_DICE', () => {
+  test('carries exactly one 7 across both dice', () => {
+    // DOUBLE_X = 77 is only a safe sentinel because 76 is the true ceiling —
+    // that is, no ordinary roll can produce a value of 77. That holds only
+    // because exactly one face in the whole game shows a 7. If a future dice
+    // change added a second 7, an opening throw of two 7s would resolve to a
+    // real 77, which `bidLabel` renders as `XX` and which beats every other
+    // bid — a silent, undetectable collision with the double-cross jackpot.
+    const sevens = RACE_DICE.flatMap((die) => die).filter((face) => face === 7)
+    expect(sevens).toHaveLength(1)
   })
 })

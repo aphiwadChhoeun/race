@@ -5,6 +5,7 @@ import {
   bidLabel,
   collectBid,
   emptyBoard,
+  faceLabel,
   legalSlots,
   placeBid,
   resolveRoll,
@@ -199,7 +200,7 @@ export function RaceGame() {
       <div className="race__bids">
         <h2 className="race__bids-title">
           {pending
-            ? `${active.name} threw ${pending.faces.join(' and ')} — place ${bidLabel(pending.value)}`
+            ? `${active.name} threw ${pending.faces.map(faceLabel).join(' and ')} — place ${bidLabel(pending.value)}`
             : 'Bidding track'}
         </h2>
         <div className="race__bids-row">

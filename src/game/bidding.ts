@@ -33,6 +33,11 @@ export function bidLabel(value: number): string {
   return value === DOUBLE_X ? 'XX' : String(value)
 }
 
+/** How a single face is written for the player: the bust mark reads `X`. */
+export function faceLabel(face: Face): string {
+  return face === 'x' ? 'X' : String(face)
+}
+
 /** Slots on the bidding track. A slot's index is how far its winner moves. */
 export const SLOTS = 7
 
