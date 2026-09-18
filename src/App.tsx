@@ -1,8 +1,14 @@
+import { useState } from 'react'
+import { Lobby } from './game/Lobby'
 import { RaceGame } from './game/RaceGame'
-import { defaultRoster } from './game/seats'
-
-const ROSTER = defaultRoster(3).map((seat) => ({ ...seat, kind: 'human' as const }))
+import type { Seat } from './game/seats'
 
 export default function App() {
-  return <RaceGame roster={ROSTER} onExit={() => {}} />
+  const [roster, setRoster] = useState<Seat[] | null>(null)
+
+  // Returning to the lobby sets this back to null, which unmounts RaceGame —
+  // so the next race always starts from fresh state with no key needed.
+  if (!roster) return <Lobby onStart={setRoster} />
+
+  return <RaceGame roster={roster} onExit={() => setRoster(null)} />
 }

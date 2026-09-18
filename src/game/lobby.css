@@ -1,0 +1,145 @@
+.lobby {
+  width: min(460px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.lobby__title {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #e8e3d6;
+}
+
+.lobby__blurb {
+  margin: -14px 0 0;
+  color: #8e877b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.lobby__section {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.lobby__label {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8e877b;
+}
+
+.lobby__counts {
+  display: flex;
+  gap: 8px;
+}
+
+.lobby__count {
+  width: 42px;
+  padding: 9px 0;
+  border: 1px solid #2f2c27;
+  border-radius: 8px;
+  background: #1b1916;
+  color: #9d968a;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+}
+
+.lobby__count:hover {
+  border-color: #6f6857;
+}
+
+/* `aria-pressed` is the selected state, so the styling reads off it directly
+   rather than duplicating the same fact in a class. */
+.lobby__count[aria-pressed='true'] {
+  border-color: #d9d2c0;
+  background: #24211c;
+  color: #f0ece0;
+}
+
+.lobby__seats {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.lobby__seat {
+  display: grid;
+  grid-template-columns: 12px 1fr auto;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 12px;
+  border: 1px solid #2f2c27;
+  border-radius: 9px;
+  background: #1b1916;
+}
+
+.lobby__dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.lobby__name {
+  font-size: 14px;
+  color: #cfc8b9;
+}
+
+.lobby__kinds {
+  display: flex;
+  gap: 5px;
+}
+
+.lobby__kind {
+  padding: 5px 11px;
+  border: 1px solid #2f2c27;
+  border-radius: 6px;
+  background: none;
+  color: #7e776c;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+}
+
+.lobby__kind:hover {
+  border-color: #6f6857;
+}
+
+.lobby__kind[aria-pressed='true'] {
+  border-color: #d9d2c0;
+  background: #24211c;
+  color: #f0ece0;
+}
+
+.lobby__start {
+  padding: 13px 30px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(#f0ece0, #d9d2c0);
+  color: #23211d;
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #a79f8c, 0 6px 16px rgb(0 0 0 / 0.35);
+  transition: transform 90ms ease, box-shadow 90ms ease;
+}
+
+.lobby__start:hover {
+  transform: translateY(-1px);
+}
+
+.lobby__start:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #a79f8c, 0 3px 8px rgb(0 0 0 / 0.3);
+}
