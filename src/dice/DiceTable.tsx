@@ -36,11 +36,29 @@ type Stage = {
   scene: THREE.Scene
   camera: THREE.PerspectiveCamera
   dice: DieView[]
+  /** Signature of the dice specs + colours the current `dice` were built for. */
+  diceKey: string
   dieGeometry: THREE.BufferGeometry
   pipGeometry: THREE.BufferGeometry
   barGeometry: THREE.BufferGeometry
   materials: THREE.Material[]
+  /** The subset of `materials` owned by the current dice, so a rebuild can
+   *  dispose exactly those without touching the permanent scene materials
+   *  (e.g. the shadow catcher) that also live in `materials`. */
+  diceMaterials: THREE.Material[]
   disposed: boolean
+}
+
+/**
+ * A string that changes exactly when the dice a stage was built for change —
+ * either which faces each die shows, or what colour it's painted. Mirrors the
+ * `signature()` helper in `useDiceRoll.ts`: comparing die *count* alone (the
+ * previous guard) is not enough once pool sizes depend on face content.
+ */
+function diceSignature(dice: readonly DieFaces[], dieColors?: number[]): string {
+  const facesKey = dice.map((die) => die.join(',')).join('|')
+  const colorsKey = dieColors?.join(',') ?? ''
+  return `${facesKey}::${colorsKey}`
 }
 
 export type DiceTableProps = {
@@ -155,10 +173,12 @@ export function DiceTable({ recording, playId, volume = 0.45, onSettle, dieColor
       scene,
       camera,
       dice: [],
+      diceKey: '',
       dieGeometry,
       pipGeometry,
       barGeometry,
       materials,
+      diceMaterials: [],
       disposed: false,
     }
     stageRef.current = stage
@@ -191,14 +211,29 @@ export function DiceTable({ recording, playId, volume = 0.45, onSettle, dieColor
     }
   }, [])
 
-  // --- Dice: rebuilt only when the number of dice changes -----------------
+  // --- Dice: rebuilt only when the dice themselves (faces or colours) change --
   useEffect(() => {
     const stage = stageRef.current
     if (!stage || !recording) return
-    if (stage.dice.length === recording.dieCount) return
+    const key = diceSignature(recording.dice, dieColors)
+    if (stage.diceKey === key) return
+    stage.diceKey = key
 
     for (const die of stage.dice) stage.scene.remove(die.group)
     stage.dice = []
+
+    // Dispose the previous set of dice materials before building a new one —
+    // otherwise every rebuild (now content-keyed rather than count-keyed)
+    // leaks the last set. `stage.materials` also holds permanent, non-dice
+    // materials (e.g. the shadow catcher), so remove only the dice ones from
+    // it, and do so in place: the unmount cleanup closes over this same array
+    // object.
+    for (const material of stage.diceMaterials) {
+      material.dispose()
+      const index = stage.materials.indexOf(material)
+      if (index !== -1) stage.materials.splice(index, 1)
+    }
+    stage.diceMaterials = []
 
     const pipMaterial = new THREE.MeshStandardMaterial({
       color: 0x191920,
@@ -212,6 +247,7 @@ export function DiceTable({ recording, playId, volume = 0.45, onSettle, dieColor
       metalness: 0.05,
     })
     stage.materials.push(pipMaterial, barMaterial)
+    stage.diceMaterials.push(pipMaterial, barMaterial)
 
     for (let i = 0; i < recording.dieCount; i++) {
       const faces = recording.dice[i]
@@ -221,6 +257,7 @@ export function DiceTable({ recording, playId, volume = 0.45, onSettle, dieColor
         metalness: 0.02,
       })
       stage.materials.push(bodyMaterial)
+      stage.diceMaterials.push(bodyMaterial)
 
       const group = new THREE.Group()
       const body = new THREE.Mesh(stage.dieGeometry, bodyMaterial)
