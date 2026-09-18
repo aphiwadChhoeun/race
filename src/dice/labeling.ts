@@ -171,6 +171,17 @@ export const PIP_LAYOUT: Record<number, Vec2[]> = {
     [-D, -D],
     [D, -D],
   ],
+  // Two columns of three plus a centre. The centre pip is the only thing
+  // distinguishing a 7 from a 6 at a glance, so it matters that it is there.
+  7: [
+    [-D, D],
+    [D, D],
+    [-D, 0],
+    [D, 0],
+    [-D, -D],
+    [D, -D],
+    [0, 0],
+  ],
 }
 
 /**

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
+import { pipTotal, type DieFaces, type Face } from './faces'
 import { AXES, PIP_LAYOUT, faceBasis, type Labeling } from './labeling'
 import { DIE_HALF, FPS, TABLE_HALF, readFrame, type Recording } from './physics'
 import { scheduleImpacts } from './sound'
@@ -17,12 +18,17 @@ import { scheduleImpacts } from './sound'
 const PIP_RADIUS = 0.078
 /** Pip layout coordinates are in [-1, 1]; this maps them into the face. */
 const PIP_SPREAD = 0.5
-/** Every die always carries 1+2+3+4+5+6 pips, whatever the labeling. */
-const PIPS_PER_DIE = 21
+/** A cross is two bars at right angles, sized to sit inside the pip footprint. */
+const BAR_LENGTH = 0.6
+const BAR_WIDTH = 0.11
+const BAR_DEPTH = 0.06
+/** Bars per cross face, and cross faces are the only thing that needs them. */
+const BARS_PER_CROSS = 2
 
 type DieView = {
   group: THREE.Group
   pips: THREE.Mesh[]
+  bars: THREE.Mesh[]
 }
 
 type Stage = {
@@ -32,6 +38,7 @@ type Stage = {
   dice: DieView[]
   dieGeometry: THREE.BufferGeometry
   pipGeometry: THREE.BufferGeometry
+  barGeometry: THREE.BufferGeometry
   materials: THREE.Material[]
   disposed: boolean
 }
@@ -42,9 +49,11 @@ export type DiceTableProps = {
   playId: number
   volume?: number
   onSettle?: () => void
+  /** Body colour per die, defaulting to bone white. */
+  dieColors?: number[]
 }
 
-export function DiceTable({ recording, playId, volume = 0.45, onSettle }: DiceTableProps) {
+export function DiceTable({ recording, playId, volume = 0.45, onSettle, dieColors }: DiceTableProps) {
   const hostRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<Stage | null>(null)
   const onSettleRef = useRef(onSettle)
@@ -139,6 +148,7 @@ export function DiceTable({ recording, playId, volume = 0.45, onSettle }: DiceTa
     // cube, both in silhouette and in the highlight that runs along the edge.
     const dieGeometry = new RoundedBoxGeometry(DIE_HALF * 2, DIE_HALF * 2, DIE_HALF * 2, 4, 0.12)
     const pipGeometry = new THREE.SphereGeometry(PIP_RADIUS, 16, 12)
+    const barGeometry = new THREE.BoxGeometry(BAR_LENGTH, BAR_WIDTH, BAR_DEPTH)
 
     const stage: Stage = {
       renderer,
@@ -147,6 +157,7 @@ export function DiceTable({ recording, playId, volume = 0.45, onSettle }: DiceTa
       dice: [],
       dieGeometry,
       pipGeometry,
+      barGeometry,
       materials,
       disposed: false,
     }
@@ -169,6 +180,7 @@ export function DiceTable({ recording, playId, volume = 0.45, onSettle }: DiceTa
       observer.disconnect()
       dieGeometry.dispose()
       pipGeometry.dispose()
+      barGeometry.dispose()
       for (const material of materials) material.dispose()
       scene.traverse((object) => {
         if (object instanceof THREE.Mesh) object.geometry.dispose()
@@ -188,19 +200,28 @@ export function DiceTable({ recording, playId, volume = 0.45, onSettle }: DiceTa
     for (const die of stage.dice) stage.scene.remove(die.group)
     stage.dice = []
 
-    const bodyMaterial = new THREE.MeshStandardMaterial({
-      color: 0xf4eee2,
-      roughness: 0.34,
-      metalness: 0.02,
-    })
     const pipMaterial = new THREE.MeshStandardMaterial({
       color: 0x191920,
       roughness: 0.45,
       metalness: 0.05,
     })
-    stage.materials.push(bodyMaterial, pipMaterial)
+    // Crosses are the bust mark, so they read in red rather than pip-black.
+    const barMaterial = new THREE.MeshStandardMaterial({
+      color: 0xb3382f,
+      roughness: 0.4,
+      metalness: 0.05,
+    })
+    stage.materials.push(pipMaterial, barMaterial)
 
     for (let i = 0; i < recording.dieCount; i++) {
+      const faces = recording.dice[i]
+      const bodyMaterial = new THREE.MeshStandardMaterial({
+        color: dieColors?.[i] ?? 0xf4eee2,
+        roughness: 0.34,
+        metalness: 0.02,
+      })
+      stage.materials.push(bodyMaterial)
+
       const group = new THREE.Group()
       const body = new THREE.Mesh(stage.dieGeometry, bodyMaterial)
       body.castShadow = true
@@ -208,7 +229,7 @@ export function DiceTable({ recording, playId, volume = 0.45, onSettle }: DiceTa
       group.add(body)
 
       const pips: THREE.Mesh[] = []
-      for (let p = 0; p < PIPS_PER_DIE; p++) {
+      for (let p = 0; p < pipTotal(faces); p++) {
         const pip = new THREE.Mesh(stage.pipGeometry, pipMaterial)
         // Pips don't cast shadows: at this scale the maps only produce speckle.
         pip.castShadow = false
@@ -216,10 +237,19 @@ export function DiceTable({ recording, playId, volume = 0.45, onSettle }: DiceTa
         pips.push(pip)
       }
 
+      const crossFaces = faces.filter((face) => face === 'x').length
+      const bars: THREE.Mesh[] = []
+      for (let b = 0; b < crossFaces * BARS_PER_CROSS; b++) {
+        const bar = new THREE.Mesh(stage.barGeometry, barMaterial)
+        bar.castShadow = false
+        group.add(bar)
+        bars.push(bar)
+      }
+
       stage.scene.add(group)
-      stage.dice.push({ group, pips })
+      stage.dice.push({ group, pips, bars })
     }
-  }, [recording])
+  }, [recording, dieColors])
 
   // --- Pips: repositioned whenever the labeling changes -------------------
   useEffect(() => {
@@ -227,7 +257,7 @@ export function DiceTable({ recording, playId, volume = 0.45, onSettle }: DiceTa
     if (!stage || !recording) return
     recording.outcomes.forEach((outcome, index) => {
       const die = stage.dice[index]
-      if (die) applyLabeling(die, outcome.labeling)
+      if (die) applyFaces(die, outcome.labeling, recording.dice[index])
     })
   }, [recording])
 
@@ -310,23 +340,58 @@ export function DiceTable({ recording, playId, volume = 0.45, onSettle }: DiceTa
   return <div className="dice-table" ref={hostRef} />
 }
 
-/** Places all 21 pips according to which value sits on which face. */
-function applyLabeling(die: DieView, labeling: Labeling) {
-  let cursor = 0
+/**
+ * Places pips and cross-bars according to which face id sits on which axis.
+ *
+ * A die only carries as many pips as its faces need, and only the faces it
+ * actually has, so anything left over from a previous dressing is hidden rather
+ * than abandoned in place.
+ */
+function applyFaces(die: DieView, labeling: Labeling, faces: DieFaces) {
+  let pipCursor = 0
+  let barCursor = 0
+  // Sit the marks slightly proud of the surface, like an inlaid spot.
+  const pipDepth = DIE_HALF - 0.035
+  const barDepth = DIE_HALF - 0.012
+
   for (let axisIndex = 0; axisIndex < AXES.length; axisIndex++) {
     const axis = AXES[axisIndex]
-    const value = labeling[axisIndex]
+    const face: Face = faces[labeling[axisIndex] - 1]
     const { u, v } = faceBasis(axis)
-    for (const [du, dv] of PIP_LAYOUT[value]) {
-      const pip = die.pips[cursor++]
-      if (!pip) return
-      // Sit the pip slightly proud of the surface, like an inlaid spot.
-      const depth = DIE_HALF - 0.035
-      pip.position.set(
+
+    const place = (mesh: THREE.Mesh, depth: number, du: number, dv: number) => {
+      mesh.position.set(
         axis[0] * depth + u[0] * du * PIP_SPREAD + v[0] * dv * PIP_SPREAD,
         axis[1] * depth + u[1] * du * PIP_SPREAD + v[1] * dv * PIP_SPREAD,
         axis[2] * depth + u[2] * du * PIP_SPREAD + v[2] * dv * PIP_SPREAD,
       )
+      mesh.visible = true
+    }
+
+    if (face === 'x') {
+      // The face's own basis, so the bars lie in its plane whatever axis it is.
+      const basis = new THREE.Matrix4().makeBasis(
+        new THREE.Vector3(u[0], u[1], u[2]),
+        new THREE.Vector3(v[0], v[1], v[2]),
+        new THREE.Vector3(axis[0], axis[1], axis[2]),
+      )
+      for (const angle of [Math.PI / 4, -Math.PI / 4]) {
+        const bar = die.bars[barCursor++]
+        if (!bar) break
+        place(bar, barDepth, 0, 0)
+        bar.setRotationFromMatrix(basis)
+        bar.rotateZ(angle)
+      }
+      continue
+    }
+
+    for (const [du, dv] of PIP_LAYOUT[face]) {
+      const pip = die.pips[pipCursor++]
+      if (!pip) break
+      place(pip, pipDepth, du, dv)
     }
   }
+
+  for (let i = pipCursor; i < die.pips.length; i++) die.pips[i].visible = false
+  for (let i = barCursor; i < die.bars.length; i++) die.bars[i].visible = false
 }
