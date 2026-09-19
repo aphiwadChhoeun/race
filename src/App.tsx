@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Lobby } from './game/Lobby'
 import { RaceGame } from './game/RaceGame'
-import type { Seat } from './game/seats'
+import type { Seat } from './engine/seats'
 
 export default function App() {
   const [roster, setRoster] = useState<Seat[] | null>(null)

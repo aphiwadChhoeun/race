@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MAX_SEATS, MIN_SEATS, defaultRoster, type Seat, type SeatKind } from './seats'
+import { MAX_SEATS, MIN_SEATS, defaultRoster, type Seat, type SeatKind } from '../engine/seats'
 import { Snail } from './Snail'
 import './lobby.css'
 

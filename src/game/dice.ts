@@ -1,19 +1,3 @@
-import type { DieFaces } from '../dice'
-
-/**
- * The two dice are deliberately not interchangeable: only B can roll a 4 or the
- * game's single 7, and only A can roll a 5 or 6. Each carries one cross, so any
- * given die shows one with probability 1/6.
- *
- * Faces are listed in face-id order, which keeps the standard die's
- * opposite-face pairing: A reads 1-6, 2-5, 3-x and B reads 1-7, 2-x, 3-4.
- */
-export const DIE_A: DieFaces = [1, 2, 3, 'x', 5, 6]
-export const DIE_B: DieFaces = [1, 2, 3, 4, 'x', 7]
-
-/** Always in this order, so a face array is always `[dieA, dieB]`. */
-export const RACE_DICE: readonly DieFaces[] = [DIE_A, DIE_B]
-
 /**
  * Cream for A, sky for B — the dice have to be told apart at a glance.
  *
@@ -21,5 +5,8 @@ export const RACE_DICE: readonly DieFaces[] = [DIE_A, DIE_B]
  * (`DiceTable.tsx`), so a dark die body would swallow the very marks the game
  * is read from; the old slate B was already the dimmer of the two. Against the
  * sunlit grass of `.race__table`, cream and sky both keep their edges.
+ *
+ * Which faces a die carries is a rule and lives in `engine/dice.ts`, where the
+ * Worker can read it. What colour it is painted is not, and lives here.
  */
 export const DIE_COLORS = [0xfff6e3, 0x9fd8f2]

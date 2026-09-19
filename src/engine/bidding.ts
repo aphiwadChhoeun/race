@@ -1,4 +1,4 @@
-import type { Face } from '../dice'
+import type { Face } from '../dice/faces'
 
 /**
  * Both dice showing a cross on the opening throw: the strongest bid there is.

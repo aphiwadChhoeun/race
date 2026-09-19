@@ -9,9 +9,9 @@ import {
   placeBid,
   resolveRoll,
   type Board,
-} from './bidding'
-import { RACE_DICE } from './dice'
-import type { Seat } from './seats'
+} from '../engine/bidding'
+import { RACE_DICE } from '../engine/dice'
+import type { Seat } from '../engine/seats'
 
 export const TRACK_LENGTH = 30
 

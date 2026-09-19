@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { decideAi } from './ai'
+import { decideAi } from '../engine/ai'
 import type { Player, TurnOutcome } from './useRaceGame'
 
 /** Long enough to read the log line, short enough that six seats don't drag. */
