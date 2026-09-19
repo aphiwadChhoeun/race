@@ -1,39 +1,101 @@
+/* The race board: one cream card stamped onto the garden, with a dark-green
+   outline on everything. The outline weight and the "stamped" drop shadow are
+   tokens (`--stroke`, `--lift`) so the cartoon reads as one hand, not six. */
+
 .race {
-  width: min(720px, 100%);
+  width: min(760px, 100%);
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
+  padding: 22px 24px 24px;
+  border: var(--stroke) solid var(--outline);
+  border-radius: 28px;
+  background: var(--card);
+  box-shadow: var(--lift-deep);
 }
 
 .race__header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
+  gap: 12px;
 }
 
-.race__header h1 {
+.race__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin: 0;
-  font-size: 22px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #e8e3d6;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  color: var(--outline);
+}
+
+/* The wordmark's own snail. Tilted, because a level one looks parked. */
+.race__title .snail {
+  transform: rotate(-8deg);
+}
+
+.race__header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .race__toggle {
   display: flex;
   align-items: center;
-  gap: 7px;
-  font-size: 13px;
-  color: #9d968a;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-soft);
   cursor: pointer;
 }
 
-/* --- Track --------------------------------------------------------------- */
+.race__toggle input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--grass-deep);
+  cursor: pointer;
+}
+
+.race__exit {
+  padding: 6px 14px;
+  border: 2px solid var(--outline);
+  border-radius: 999px;
+  background: var(--card-sunk);
+  color: var(--outline);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 0 var(--outline);
+  transition: transform 90ms ease, box-shadow 90ms ease, background 120ms ease;
+}
+
+.race__exit:hover {
+  background: #ffe9a8;
+}
+
+.race__exit:active {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 var(--outline);
+}
+
+/* --- Track ---------------------------------------------------------------
+   A strip of garden path per snail, with the finish banded across the right
+   end of every lane so the lanes read as one race rather than six meters. */
 
 .race__track {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  padding: 12px 14px;
+  border: var(--stroke) solid var(--outline);
+  border-radius: 20px;
+  background: linear-gradient(180deg, #e7f6cd, #cdeaa2);
 }
 
 .race__lane {
@@ -41,68 +103,193 @@
   /* Fixed, not max-content: each `.race__lane` is its own grid (the track is
      a flex column of rows, not a shared grid), so a content-sized first
      column sizes independently per lane and staggers every bar's left edge
-     by however much its name+badge varies — measured at 18px across a
-     6-seat roster. A fixed width wide enough for the longest name plus the
-     AI badge (measured 66px for "Amber" + badge) keeps every bar flush. */
-  grid-template-columns: 70px 1fr 62px;
+     by however much its name+badge varies. A fixed width wide enough for the
+     longest name plus the AI badge keeps every bar flush — "Bubbles" plus the
+     badge is the widest case at 88px. */
+  grid-template-columns: 88px 1fr 56px;
   align-items: center;
-  gap: 12px;
-  font-size: 13px;
+  gap: 10px;
+  font-size: 14px;
 }
 
 .race__lane-name {
-  font-weight: 600;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+/* Marks an AI seat on the track, so you always know who is playing itself. */
+.race__lane-tag {
+  margin-left: 4px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--outline);
+  color: #eaffd9;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  vertical-align: middle;
 }
 
 .race__lane-tiles {
   position: relative;
-  height: 12px;
+  height: 30px;
+  border: 2px solid var(--outline);
   border-radius: 999px;
-  background: #211f1c;
-  box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.6);
-  overflow: visible;
+  background: #fffdf3;
+  overflow: hidden;
 }
 
+/* Dashed lane markings down the middle of the path. */
+.race__lane-tiles::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: repeating-linear-gradient(90deg, rgb(47 93 52 / 0.2) 0 7px, transparent 7px 16px)
+    left center / 100% 2px no-repeat;
+}
+
+/* The chequered finish, banded across the last stretch of every lane so the
+   six lanes read as one race rather than six separate meters. A conic
+   gradient is the whole flag: one 9px tile of four quadrants, tiled. */
+.race__lane-tiles::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 0 auto;
+  /* Above the slime trail, below the snail: a leader whose trail has reached
+     the line would otherwise paint over the flag at the exact moment it is
+     worth looking at. */
+  z-index: 2;
+  width: 18px;
+  background: conic-gradient(
+      var(--outline) 0 90deg,
+      #fffdf3 90deg 180deg,
+      var(--outline) 180deg 270deg,
+      #fffdf3 270deg
+    )
+    0 0 / 9px 9px repeat;
+  border-left: 2px solid var(--outline);
+}
+
+/* The slime trail: what the snail has already covered, glossy and translucent
+   so the dashed path still shows through it. */
 .race__lane-fill {
   position: absolute;
-  inset: 0 auto 0 0;
+  inset: 2px auto 2px 0;
+  /* Above the path markings and the finish flag, below the snail. */
+  z-index: 1;
   border-radius: 999px;
-  opacity: 0.4;
-  transition: width 320ms cubic-bezier(0.2, 0.8, 0.3, 1);
+  opacity: 0.55;
+  transition: width 420ms cubic-bezier(0.2, 0.8, 0.3, 1);
 }
 
-.race__token {
+.race__lane-fill::after {
+  content: '';
   position: absolute;
+  inset: 2px 4px auto 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.55);
+}
+
+/* The snail rides the lane. `left` moves it and `translateX(-p%)` of its own
+   width pulls it back by the same fraction, so it sits flush inside the lane
+   at both ends instead of hanging off them — no fixed half-width to keep in
+   sync with the SVG's size. */
+.race__racer {
+  position: absolute;
+  z-index: 3;
   top: 50%;
-  width: 16px;
-  height: 16px;
-  margin-left: -8px;
+  transform: translate(calc(var(--p) * -1%), -50%);
+  transition: left 420ms cubic-bezier(0.2, 0.8, 0.3, 1);
+  filter: drop-shadow(0 2px 2px rgb(31 68 38 / 0.35));
+}
+
+/* Whose turn it is, without stealing the lane's colour. */
+.race__racer--active::before {
+  content: '';
+  position: absolute;
+  inset: -5px;
   border-radius: 50%;
-  transform: translateY(-50%);
-  box-shadow: 0 2px 6px rgb(0 0 0 / 0.5);
-  transition: left 320ms cubic-bezier(0.2, 0.8, 0.3, 1);
+  background: radial-gradient(circle, rgb(255 212 71 / 0.85), transparent 68%);
+  z-index: -1;
 }
 
 .race__lane-score {
   text-align: right;
-  color: #8e877b;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--ink-soft);
   font-variant-numeric: tabular-nums;
 }
 
-/* --- Bidding track ------------------------------------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  .race__racer--active {
+    animation: racer-hop 1.1s ease-in-out infinite;
+  }
+
+  .race__racer--active::before {
+    animation: racer-pulse 1.1s ease-in-out infinite;
+  }
+
+  /* The winner's lap of honour. */
+  .race__racer--won {
+    animation: racer-cheer 0.7s ease-in-out 3;
+  }
+}
+
+/* The hop has to re-state the centring transform, or animating `transform`
+   would drop the positioning the racer depends on. */
+@keyframes racer-hop {
+  0%,
+  100% {
+    transform: translate(calc(var(--p) * -1%), -50%);
+  }
+  50% {
+    transform: translate(calc(var(--p) * -1%), calc(-50% - 3px));
+  }
+}
+
+@keyframes racer-pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+}
+
+@keyframes racer-cheer {
+  0%,
+  100% {
+    transform: translate(calc(var(--p) * -1%), -50%) rotate(0deg);
+  }
+  25% {
+    transform: translate(calc(var(--p) * -1%), calc(-50% - 6px)) rotate(-12deg);
+  }
+  75% {
+    transform: translate(calc(var(--p) * -1%), calc(-50% - 6px)) rotate(12deg);
+  }
+}
+
+/* --- Bidding leaves ------------------------------------------------------ */
 
 .race__bids {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 9px;
 }
 
 .race__bids-title {
   margin: 0;
-  font-size: 12px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #8e877b;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  min-height: 1.3em;
 }
 
 .race__bids-row {
@@ -111,67 +298,128 @@
   gap: 8px;
 }
 
+/* A leaf: rounded hard on one diagonal, clipped on the other. The asymmetric
+   radius is enough to read as foliage while leaving a square middle for the
+   number, which a true leaf silhouette would not. */
 .race__slot {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 8px 0 7px;
-  border: 1px solid #2f2c27;
-  border-radius: 9px;
-  background: #1b1916;
+  gap: 1px;
+  padding: 9px 0 8px;
+  border: 2px solid var(--outline);
+  border-radius: 20px 6px 20px 6px;
+  background: var(--card-sunk);
+  color: var(--ink-faint);
   font: inherit;
   cursor: default;
-  transition: transform 90ms ease, border-color 120ms ease, background 120ms ease;
+  box-shadow: 0 3px 0 var(--outline);
+  transition: transform 110ms ease, box-shadow 110ms ease, background 140ms ease;
+}
+
+/* The leaf's midrib. */
+.race__slot::before {
+  content: '';
+  position: absolute;
+  inset: 8px auto 8px 50%;
+  width: 1px;
+  background: rgb(47 93 52 / 0.15);
 }
 
 /* Only slots the current throw may legally take are enabled, so `:not(:disabled)`
    is the whole "you can put it here" affordance. */
 .race__slot:not(:disabled) {
-  border-color: #6f6857;
-  background: #24211c;
+  background: linear-gradient(180deg, #d8f5a8, #aee56f);
+  color: var(--outline);
   cursor: pointer;
 }
 
 .race__slot:not(:disabled):hover {
-  transform: translateY(-2px);
-  border-color: #d9d2c0;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 0 var(--outline);
+  background: linear-gradient(180deg, #e6ffbc, #bcf07e);
+}
+
+.race__slot:not(:disabled):active {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 var(--outline);
 }
 
 .race__slot-steps {
   font-size: 11px;
-  color: #8e877b;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.75;
   font-variant-numeric: tabular-nums;
 }
 
 .race__slot-bid {
-  font-size: 16px;
-  font-weight: 600;
-  color: #6b655b;
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
 
-/* --- Table -------------------------------------------------------------- */
+/* A leaf that has just been claimed thumps down onto the track. Keyed on the
+   owning bid in the markup, so re-placing on the same leaf replays it. */
+@media (prefers-reduced-motion: no-preference) {
+  .race__slot--taken {
+    animation: leaf-stamp 320ms cubic-bezier(0.3, 1.4, 0.5, 1);
+  }
 
-/* The floor and rails exist only in the physics simulation — they are not
+  .race__slot:not(:disabled) {
+    animation: leaf-beckon 1.8s ease-in-out infinite;
+  }
+}
+
+@keyframes leaf-stamp {
+  0% {
+    transform: scale(1.35) rotate(-6deg);
+  }
+  60% {
+    transform: scale(0.94) rotate(2deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes leaf-beckon {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+/* --- Table ---------------------------------------------------------------
+
+   The floor and rails exist only in the physics simulation — they are not
    rendered — so the dice canvas is transparent and THIS background is the
    surface the player sees them land on.
 
    That makes the colour here load-bearing rather than decorative: the dice's
-   contact shadows are composited onto it, so its lightness decides how strongly
-   they read. The shadow catcher in DiceTable.tsx darkens whatever is behind it
-   by 38%, so on this near-black that is ~8 luma of contrast — subtle, but
-   legible next to the bright dice, and enough to ground them. A mid-tone (e.g.
-   the commented felt below, ~23 luma) or anything lighter makes it much more
-   pronounced. Going darker than this is where the dice start to look like they
-   are floating. */
+   contact shadows are composited onto it, so its lightness decides how
+   strongly they read. The shadow catcher in DiceTable.tsx darkens whatever is
+   behind it by 38%, and this sunlit grass sits around 82 luma — so a shadow
+   lands about 31 luma darker than the turf around it. That is roughly four
+   times the contrast the old near-black backdrop gave, which is the one real
+   dividend of going light: the dice sit *on* the lawn instead of hovering in
+   a void. Going much darker here is where they start to float again. */
 .race__table {
   height: clamp(300px, 46vh, 420px);
-  border-radius: 14px;
+  border: var(--stroke) solid var(--outline);
+  border-radius: 20px;
   overflow: hidden;
-  background: #14161a;
-  /* background: linear-gradient(160deg, #3c4a3e, #2a3329); */
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.05), 0 10px 30px rgb(0 0 0 / 0.4);
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgb(255 255 255 / 0.35), transparent 62%),
+    repeating-linear-gradient(58deg, rgb(90 168 58 / 0.07) 0 11px, transparent 11px 26px),
+    linear-gradient(170deg, #c7ea92, #9ed665);
+  box-shadow: inset 0 3px 10px rgb(31 68 38 / 0.18);
 }
 
 .dice-table {
@@ -179,109 +427,162 @@
   height: 100%;
 }
 
-/* --- Controls ----------------------------------------------------------- */
+/* --- Controls ------------------------------------------------------------ */
 
 .race__controls {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
+  align-items: center;
+  gap: 10px;
 }
 
 .race__roll {
-  padding: 13px 30px;
-  border: none;
-  border-radius: 10px;
-  background: linear-gradient(#f0ece0, #d9d2c0);
-  color: #23211d;
+  padding: 14px 32px;
+  border: var(--stroke) solid var(--outline);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffe17a, #ffbe2e);
+  color: var(--outline);
   font: inherit;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
   cursor: pointer;
-  box-shadow: 0 3px 0 #a79f8c, 0 6px 16px rgb(0 0 0 / 0.35);
-  transition: transform 90ms ease, box-shadow 90ms ease;
+  box-shadow: 0 5px 0 var(--outline), 0 12px 22px rgb(31 68 38 / 0.25);
+  transition: transform 90ms ease, box-shadow 90ms ease, filter 120ms ease;
 }
 
 .race__roll:hover:not(:disabled) {
-  transform: translateY(-1px);
+  filter: brightness(1.06);
+  transform: translateY(-2px);
+  box-shadow: 0 7px 0 var(--outline), 0 16px 26px rgb(31 68 38 / 0.28);
 }
 
 .race__roll:active:not(:disabled) {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 #a79f8c, 0 3px 8px rgb(0 0 0 / 0.3);
+  transform: translateY(5px);
+  box-shadow: 0 0 0 var(--outline), 0 4px 10px rgb(31 68 38 / 0.2);
 }
 
 .race__roll:disabled {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: default;
+}
+
+/* The secondary choice at a dead end: available, but not the obvious click. */
+.race__roll--quiet {
+  padding: 11px 22px;
+  font-size: 14px;
+  background: var(--card-sunk);
+  box-shadow: 0 4px 0 var(--outline);
+}
+
+.race__roll--quiet:hover:not(:disabled) {
+  background: #eaf6d4;
+  box-shadow: 0 6px 0 var(--outline);
+}
+
+/* The winning button announces a result, so it gets the loudest treatment on
+   the page — and, unlike the leaves, it keeps moving until it is clicked. */
+.race__roll--win {
+  background: linear-gradient(180deg, #b6f56a, #6fd62f);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .race__roll--win {
+    animation: win-throb 0.9s ease-in-out infinite;
+  }
+}
+
+@keyframes win-throb {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
 }
 
 .race__status {
   margin: 0;
   text-align: center;
-  min-height: 1.2em;
-  color: #cfc8b9;
-  font-size: 14px;
+  min-height: 1.3em;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
 }
 
 .race__log {
   margin: 0;
-  padding: 0;
+  padding: 10px 14px;
   list-style: none;
+  border-radius: 14px;
+  background: var(--card-sunk);
   text-align: center;
-  font-size: 12.5px;
-  color: #7e776c;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.race__log:empty {
+  display: none;
 }
 
 .race__log li + li {
-  margin-top: 3px;
+  margin-top: 2px;
+  opacity: 0.8;
 }
 
-.race__controls {
-  gap: 10px;
-}
+/* --- Narrow screens ------------------------------------------------------ */
 
-/* The secondary choice at a dead end: available, but not the obvious click. */
-.race__roll--quiet {
-  background: none;
-  border: 1px solid #4a453c;
-  color: #9d968a;
-  box-shadow: none;
-}
+@media (max-width: 560px) {
+  .race {
+    padding: 16px 14px 18px;
+    border-radius: 22px;
+  }
 
-.race__roll--quiet:hover:not(:disabled) {
-  border-color: #6f6857;
-  color: #cfc8b9;
-}
+  /* The wordmark is two words and the controls are two more, so the header
+     runs out of room before anything else does. Shrinking the mark and its
+     snail keeps "Snail Dash" on one line down to 320px. */
+  .race__title {
+    font-size: 21px;
+    gap: 7px;
+  }
 
-.race__header-right {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
+  .race__title .snail {
+    width: 27px;
+    height: 27px;
+  }
 
-.race__exit {
-  padding: 5px 12px;
-  border: 1px solid #4a453c;
-  border-radius: 7px;
-  background: none;
-  color: #9d968a;
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
+  .race__header-right {
+    gap: 9px;
+  }
 
-.race__exit:hover {
-  border-color: #6f6857;
-  color: #cfc8b9;
-}
+  .race__toggle {
+    font-size: 13px;
+  }
 
-/* Marks an AI seat on the track, so you always know who is playing itself. */
-.race__lane-tag {
-  margin-left: 5px;
-  padding: 1px 4px;
-  border-radius: 4px;
-  background: #2f2c27;
-  color: #8e877b;
-  font-size: 9px;
-  letter-spacing: 0.08em;
-  vertical-align: middle;
+  .race__lane {
+    grid-template-columns: 72px 1fr 46px;
+    gap: 7px;
+    font-size: 13px;
+  }
+
+  .race__bids-row {
+    gap: 5px;
+  }
+
+  /* The leaf radius has to come down with the leaf, or a 20px curve on a 44px
+     card eats the corners and the shape stops reading as a leaf at all. */
+  .race__slot {
+    border-radius: 14px 5px 14px 5px;
+  }
+
+  .race__slot-bid {
+    font-size: 16px;
+  }
+
+  .race__title,
+  .race__bids-title {
+    text-wrap: balance;
+  }
 }

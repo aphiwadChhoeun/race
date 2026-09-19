@@ -1,37 +1,56 @@
+/* The lobby is the race card's smaller sibling: same cream stock, same
+   dark-green outline, same stamped shadow — so starting a race reads as
+   walking through a door rather than landing in a different game. */
+
 .lobby {
-  width: min(460px, 100%);
+  width: min(500px, 100%);
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 20px;
+  padding: 26px 26px 28px;
+  border: var(--stroke) solid var(--outline);
+  border-radius: 28px;
+  background: var(--card);
+  box-shadow: var(--lift-deep);
 }
 
 .lobby__title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin: 0;
-  font-size: 26px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: #e8e3d6;
+  font-size: 38px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--outline);
+}
+
+.lobby__title .snail {
+  transform: rotate(-8deg);
+  flex: none;
 }
 
 .lobby__blurb {
-  margin: -14px 0 0;
-  color: #8e877b;
-  font-size: 13px;
+  margin: -12px 0 0;
+  color: var(--ink-soft);
+  font-size: 14.5px;
+  font-weight: 500;
   line-height: 1.5;
 }
 
 .lobby__section {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 10px;
 }
 
 .lobby__label {
   margin: 0;
-  font-size: 11px;
-  letter-spacing: 0.14em;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #8e877b;
+  color: var(--ink-faint);
 }
 
 .lobby__counts {
@@ -40,27 +59,35 @@
 }
 
 .lobby__count {
-  width: 42px;
+  width: 46px;
   padding: 9px 0;
-  border: 1px solid #2f2c27;
-  border-radius: 8px;
-  background: #1b1916;
-  color: #9d968a;
+  border: 2px solid var(--outline);
+  border-radius: 14px;
+  background: var(--card-sunk);
+  color: var(--outline);
   font: inherit;
+  font-size: 16px;
+  font-weight: 700;
   cursor: pointer;
-  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+  box-shadow: 0 3px 0 var(--outline);
+  transition: transform 90ms ease, box-shadow 90ms ease, background 130ms ease;
 }
 
 .lobby__count:hover {
-  border-color: #6f6857;
+  background: #eaf6d4;
+}
+
+.lobby__count:active {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 var(--outline);
 }
 
 /* `aria-pressed` is the selected state, so the styling reads off it directly
    rather than duplicating the same fact in a class. */
 .lobby__count[aria-pressed='true'] {
-  border-color: #d9d2c0;
-  background: #24211c;
-  color: #f0ece0;
+  background: linear-gradient(180deg, #ffe17a, #ffbe2e);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 0 var(--outline);
 }
 
 .lobby__seats {
@@ -69,29 +96,24 @@
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
 }
 
 .lobby__seat {
   display: grid;
-  grid-template-columns: 12px 1fr auto;
+  grid-template-columns: 30px 1fr auto;
   align-items: center;
-  gap: 11px;
-  padding: 8px 12px;
-  border: 1px solid #2f2c27;
-  border-radius: 9px;
-  background: #1b1916;
-}
-
-.lobby__dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
+  gap: 12px;
+  padding: 8px 14px;
+  border: 2px solid var(--outline);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #f6fbe8, var(--card-sunk));
+  box-shadow: 0 3px 0 rgb(47 93 52 / 0.35);
 }
 
 .lobby__name {
-  font-size: 14px;
-  color: #cfc8b9;
+  font-size: 17px;
+  font-weight: 700;
 }
 
 .lobby__kinds {
@@ -100,46 +122,58 @@
 }
 
 .lobby__kind {
-  padding: 5px 11px;
-  border: 1px solid #2f2c27;
-  border-radius: 6px;
-  background: none;
-  color: #7e776c;
+  padding: 5px 13px;
+  border: 2px solid var(--outline);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--ink-soft);
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
-  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+  transition: background 130ms ease, color 130ms ease;
 }
 
 .lobby__kind:hover {
-  border-color: #6f6857;
+  background: #eaf6d4;
 }
 
 .lobby__kind[aria-pressed='true'] {
-  border-color: #d9d2c0;
-  background: #24211c;
-  color: #f0ece0;
+  background: var(--outline);
+  color: #eaffd9;
 }
 
 .lobby__start {
-  padding: 13px 30px;
-  border: none;
-  border-radius: 10px;
-  background: linear-gradient(#f0ece0, #d9d2c0);
-  color: #23211d;
+  padding: 15px 30px;
+  border: var(--stroke) solid var(--outline);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #b6f56a, #6fd62f);
+  color: var(--outline);
   font: inherit;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-size: 19px;
+  font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 3px 0 #a79f8c, 0 6px 16px rgb(0 0 0 / 0.35);
-  transition: transform 90ms ease, box-shadow 90ms ease;
+  box-shadow: 0 5px 0 var(--outline), 0 12px 22px rgb(31 68 38 / 0.25);
+  transition: transform 90ms ease, box-shadow 90ms ease, filter 120ms ease;
 }
 
 .lobby__start:hover {
-  transform: translateY(-1px);
+  filter: brightness(1.05);
+  transform: translateY(-2px);
+  box-shadow: 0 7px 0 var(--outline), 0 16px 26px rgb(31 68 38 / 0.28);
 }
 
 .lobby__start:active {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 #a79f8c, 0 3px 8px rgb(0 0 0 / 0.3);
+  transform: translateY(5px);
+  box-shadow: 0 0 0 var(--outline), 0 4px 10px rgb(31 68 38 / 0.2);
+}
+
+@media (max-width: 560px) {
+  .lobby {
+    padding: 18px 16px 20px;
+  }
+
+  .lobby__title {
+    font-size: 29px;
+  }
 }

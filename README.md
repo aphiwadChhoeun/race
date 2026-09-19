@@ -1,6 +1,6 @@
-# Race
+# Snail Dash
 
-A 3–6 player dice race with a real rigid-body physics simulation behind the dice.
+A 3–6 snail dice race with a real rigid-body physics simulation behind the dice.
 
 ```bash
 npm install
@@ -22,8 +22,10 @@ npm test
 The race track runs `0…30` and the first player to reach or pass it wins. You
 never move by what you rolled, though — you move by what you successfully *bid*.
 
-Alongside the track sits a **bidding track** of seven slots labelled `0…6`. A
-slot's label is how far its occupant will move; each slot holds at most one bid.
+Alongside the track sits a **bidding track** of seven slots labelled `0…6` —
+the lawn draws them as leaves, but slot is the word the code and the rules use.
+A slot's label is how far its occupant will move; each slot holds at most one
+bid.
 
 ### The dice
 
@@ -105,7 +107,14 @@ driver lives in [`useAiTurns.ts`](src/game/useAiTurns.ts).
 
 ## Players
 
-Three to six seats, each human or AI, chosen in the lobby before a race.
+Three to six seats, each human or AI, chosen in the lobby before a race. The
+snails are Turbo, Zippy, Pesto, Toffee, Bubbles and Minty, in that turn order.
+
+Each carries two shades of its hue, not one: a saturated `color` for the shell,
+the slime trail and the lane token, and a darker `ink` for its name and its
+bids. The theme is light, so a shell bright enough to read as a cartoon on
+grass is a name too pale to read on cream — one colour cannot do both jobs, and
+[`seats.test.ts`](src/game/seats.test.ts) holds every seat to having both.
 
 An AI seat plays the same rules with one strategy: if anything on the board can
 be outbid, it rerolls until it can outbid it, then takes the **highest** slot
@@ -223,18 +232,30 @@ the dice lose their contact shadows and read as floating in a void — it is the
 shadow, not the surface, that grounds them.
 
 That makes the backdrop colour load-bearing rather than decorative. The shadow
-darkens whatever is behind it by 38%, so on the current near-black background
-that is ~8 luma of contrast — subtle, but legible against the bright dice and
-enough to ground them. A mid-tone or lighter backdrop makes it markedly
-stronger. See the note on `.race__table` in [`race.css`](src/game/race.css),
-which has a felt-toned alternative commented out. To drop shadows entirely,
+darkens whatever is behind it by 38%, so the lightness of `.race__table` decides
+how strongly the dice read. The sunlit grass it carries sits around 82 luma, so
+a shadow lands about 31 luma darker than the turf around it — roughly four times
+what the near-black backdrop this theme replaced could give, and the one real
+dividend of going light: the dice sit *on* the lawn rather than hovering in a
+void. Going much darker is where they start to float again. See the note on
+`.race__table` in [`race.css`](src/game/race.css). To drop shadows entirely,
 remove the catcher block in `DiceTable.tsx` and set `shadowMap.enabled = false`.
+
+The dice themselves are cream and sky ([`dice.ts`](src/game/dice.ts)), and both
+stay light on purpose: pips are near-black and a cross is red, so a dark die
+body would swallow the marks the game is read from.
 
 ## Accessibility and interruption
 
 - `prefers-reduced-motion: reduce` skips playback and shows the settled dice.
+  Every ambient animation in the theme — the eyestalk bob, the active snail's
+  hop, the winner's wiggle, the beckoning leaves, the throbbing win button —
+  lives inside a `prefers-reduced-motion: no-preference` block, so the whole
+  board goes still with it and nothing moves that wasn't asked for.
 - The game announces the outcome through a `role="status"` region once the dice
   settle.
+- Snails are `aria-hidden`: every one of them sits beside its seat's name in
+  text, so announcing the SVG too would only say the name twice.
 - An interrupted throw shows the outcome it was heading for and still reports the
   settle, so state and pixels never disagree and the tray can't get stuck.
 - Pressing Throw mid-roll is ignored rather than restarting — that would let a
@@ -243,11 +264,18 @@ remove the catcher block in `DiceTable.tsx` and set `shadowMap.enabled = false`.
 ## Verification
 
 **Build and run:** `tsc --noEmit` passes clean under `strict`, `noUnusedLocals`
-and `verbatimModuleSyntax`; `vite build` succeeds (789 kB JS, 218 kB gzipped —
+and `verbatimModuleSyntax`; `vite build` succeeds (801 kB JS, 222 kB gzipped —
 mostly three.js, so the chunk-size warning is expected). The dev server runs and
-the game plays: a throw logged "Red threw 6 and 2 — place 62" while the dice on
-screen showed exactly 6 and 2, which exercises the physics recording, the
-relabelling, the pip placement and the turn logic together.
+the game plays: a throw logged "Turbo bids 72 on slot 6" while the dice on
+screen showed exactly 2 and 7, which exercises the physics recording, the
+relabelling, the pip placement and the turn logic together. A later turn had
+Zippy roll a double 1, bank the step, and place `73` on slot 5 to knock Turbo's
+`72` off slot 6 — eviction, the double bonus and the slime trail in one turn.
+
+The track geometry was measured rather than eyeballed: at 0/30 the snail sits
+2px inside its lane's left border and at 30/30 2px inside the right, so the
+`translateX(calc(var(--p) * -1%))` trick keeps it in the lane at both ends
+without a hard-coded half-width to drift out of sync with the SVG.
 
 Versions and API surface were checked against the installed packages: `three`
 0.170.0 with a matching `@types/three` 0.170.0, `cannon-es` 0.20.0. The

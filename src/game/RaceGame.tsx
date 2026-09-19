@@ -3,6 +3,7 @@ import { DiceTable } from '../dice'
 import { SLOTS, bidLabel, faceLabel } from './bidding'
 import { DIE_COLORS } from './dice'
 import type { Seat } from './seats'
+import { Snail } from './Snail'
 import { TRACK_LENGTH, useRaceGame } from './useRaceGame'
 import { useAiTurns } from './useAiTurns'
 import './race.css'
@@ -28,7 +29,10 @@ export function RaceGame({ roster, onExit }: RaceGameProps) {
   return (
     <div className="race">
       <header className="race__header">
-        <h1>Race</h1>
+        <h1 className="race__title">
+          <Snail color="#ff5a4e" size={34} />
+          Snail Dash
+        </h1>
         <div className="race__header-right">
           <label className="race__toggle">
             <input type="checkbox" checked={!muted} onChange={(e) => setMuted(!e.target.checked)} />
@@ -41,41 +45,49 @@ export function RaceGame({ roster, onExit }: RaceGameProps) {
       </header>
 
       <div className="race__track" role="list" aria-label="Race track">
-        {players.map((player, index) => (
-          <div className="race__lane" key={player.name} role="listitem">
-            <span className="race__lane-name" style={{ color: player.color }}>
-              {player.name}
-              {player.kind === 'ai' && <span className="race__lane-tag">AI</span>}
-            </span>
-            <div className="race__lane-tiles">
-              <div
-                className="race__lane-fill"
-                style={{
-                  width: `${(player.position / TRACK_LENGTH) * 100}%`,
-                  background: player.color,
-                }}
-              />
-              <div
-                className="race__token"
-                style={{
-                  left: `${(player.position / TRACK_LENGTH) * 100}%`,
-                  background: player.color,
-                  outline: turn === index && winner === null ? '2px solid #fff' : 'none',
-                }}
-              />
+        {players.map((player, index) => {
+          const progress = (player.position / TRACK_LENGTH) * 100
+          const isTurn = turn === index && winner === null
+
+          return (
+            <div className="race__lane" key={player.name} role="listitem">
+              <span className="race__lane-name" style={{ color: player.ink }}>
+                {player.name}
+                {player.kind === 'ai' && <span className="race__lane-tag">AI</span>}
+              </span>
+              <div className="race__lane-tiles">
+                <div
+                  className="race__lane-fill"
+                  style={{ width: `${progress}%`, background: player.color }}
+                />
+                <div
+                  className={[
+                    'race__racer',
+                    isTurn && 'race__racer--active',
+                    winner === index && 'race__racer--won',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  // `--p` drives the transform that keeps the snail inside the
+                  // lane at both ends; see `.race__racer` in race.css.
+                  style={{ left: `${progress}%`, ['--p' as string]: progress }}
+                >
+                  <Snail color={player.color} size={26} racing />
+                </div>
+              </div>
+              <span className="race__lane-score">
+                {player.position}/{TRACK_LENGTH}
+              </span>
             </div>
-            <span className="race__lane-score">
-              {player.position}/{TRACK_LENGTH}
-            </span>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       <div className="race__bids">
         <h2 className="race__bids-title">
           {pending
-            ? `${active.name} threw ${pending.faces.map(faceLabel).join(' and ')} — place ${bidLabel(pending.value)}`
-            : 'Bidding track'}
+            ? `${active.name} threw ${pending.faces.map(faceLabel).join(' and ')} — park ${bidLabel(pending.value)} on a leaf`
+            : 'Bidding leaves — a leaf pays its own number in steps'}
         </h2>
         <div className="race__bids-row">
           {slots.map((slot) => {
@@ -86,7 +98,7 @@ export function RaceGame({ roster, onExit }: RaceGameProps) {
             return (
               <button
                 key={slot}
-                className="race__slot"
+                className={`race__slot${owner ? ' race__slot--taken' : ''}`}
                 onClick={() => game.place(slot)}
                 disabled={!selectable || aiSeat}
                 aria-label={
@@ -95,12 +107,13 @@ export function RaceGame({ roster, onExit }: RaceGameProps) {
                     : `Slot ${slot}, empty`
                 }
                 style={{
-                  borderColor: owner ? owner.color : undefined,
-                  background: owner ? `${owner.color}22` : undefined,
+                  borderColor: owner ? owner.ink : undefined,
+                  background: owner ? `${owner.color}33` : undefined,
+                  boxShadow: owner ? `0 3px 0 ${owner.ink}` : undefined,
                 }}
               >
                 <span className="race__slot-steps">{slot}</span>
-                <span className="race__slot-bid" style={{ color: owner?.color }}>
+                <span className="race__slot-bid" style={{ color: owner?.ink }}>
                   {bid ? bidLabel(bid.value) : selectable ? '+' : '—'}
                 </span>
               </button>
@@ -122,8 +135,8 @@ export function RaceGame({ roster, onExit }: RaceGameProps) {
       <div className="race__controls">
         {winner !== null ? (
           <>
-            <button className="race__roll" onClick={game.reset}>
-              {players[winner].name} wins — play again
+            <button className="race__roll race__roll--win" onClick={game.reset}>
+              {players[winner].name} wins the dash — race again
             </button>
             <button className="race__roll race__roll--quiet" onClick={onExit}>
               Back to lobby
@@ -135,7 +148,7 @@ export function RaceGame({ roster, onExit }: RaceGameProps) {
           // and giving up is never the better move. `pass` survives in the hook
           // for the AI's reroll cap, which can still end a turn with nothing.
           <button className="race__roll" onClick={game.reroll} disabled={game.rolling || aiSeat}>
-            {game.rolling ? 'Rolling…' : 'Reroll (a cross busts)'}
+            {game.rolling ? 'Rolling…' : 'Reroll — a cross busts you'}
           </button>
         ) : (
           <button
@@ -143,7 +156,11 @@ export function RaceGame({ roster, onExit }: RaceGameProps) {
             onClick={game.startTurn}
             disabled={game.rolling || aiSeat}
           >
-            {game.rolling ? 'Rolling…' : aiThinking ? `${active.name} is thinking…` : `Throw for ${active.name}`}
+            {game.rolling
+              ? 'Rolling…'
+              : aiThinking
+                ? `${active.name} is thinking…`
+                : `Throw for ${active.name}`}
           </button>
         )}
       </div>

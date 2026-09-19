@@ -6,20 +6,31 @@ describe('SEAT_PALETTE', () => {
     expect(SEAT_PALETTE).toHaveLength(MAX_SEATS)
   })
 
-  test('keeps the colours the two-player game used for the first two seats', () => {
-    expect(SEAT_PALETTE[0]).toEqual({ name: 'Red', color: '#e2574c' })
-    expect(SEAT_PALETTE[1]).toEqual({ name: 'Blue', color: '#4c7fe2' })
+  test('leads with the two snails a returning player recognises', () => {
+    expect(SEAT_PALETTE[0]).toEqual({ name: 'Turbo', color: '#ff5a4e', ink: '#c2291d' })
+    expect(SEAT_PALETTE[1]).toEqual({ name: 'Zippy', color: '#2e9bff', ink: '#0a5fae' })
   })
 
   test('gives every seat a distinct name and colour', () => {
     expect(new Set(SEAT_PALETTE.map((s) => s.name)).size).toBe(MAX_SEATS)
     expect(new Set(SEAT_PALETTE.map((s) => s.color)).size).toBe(MAX_SEATS)
   })
+
+  /* The shell colour is for fills and the ink for text: a seat that shipped
+     with only one of them would render a name in a shade tuned to be bright
+     against grass, not readable on cream. */
+  test('gives every seat both a shell colour and a darker ink', () => {
+    for (const seat of SEAT_PALETTE) {
+      expect(seat.color).toMatch(/^#[0-9a-f]{6}$/)
+      expect(seat.ink).toMatch(/^#[0-9a-f]{6}$/)
+      expect(seat.ink).not.toBe(seat.color)
+    }
+  })
 })
 
 describe('defaultRoster', () => {
   test('takes identities from the palette in order', () => {
-    expect(defaultRoster(3).map((s) => s.name)).toEqual(['Red', 'Blue', 'Green'])
+    expect(defaultRoster(3).map((s) => s.name)).toEqual(['Turbo', 'Zippy', 'Pesto'])
   })
 
   test('seats one human and fills the rest with AI', () => {

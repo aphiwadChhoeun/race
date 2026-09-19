@@ -1,6 +1,28 @@
+/* --- Theme tokens --------------------------------------------------------
+   One hue family does the whole garden: deep green ink, cream card, grass and
+   sky. Seat colours are the only chroma that varies, and they come from
+   `seats.ts` as inline styles rather than living here. */
 :root {
-  font-family: ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
-  color-scheme: dark;
+  --ink: #1f4426;
+  --ink-soft: #4a7a52;
+  --ink-faint: #7ba283;
+  --card: #fffdf3;
+  --card-sunk: #f3f0e0;
+  --outline: #2f5d34;
+  --grass: #8fd05a;
+  --grass-deep: #5aa83a;
+  --sky: #8fd9f5;
+  --sun: #ffd447;
+
+  /* Cartoon outlines want one consistent weight, and the drop shadows that
+     make things look stamped onto the page want one consistent offset. */
+  --stroke: 3px;
+  --lift: 0 4px 0 var(--outline);
+  --lift-deep: 0 6px 0 var(--outline), 0 14px 28px rgb(31 68 38 / 0.28);
+
+  font-family: 'Baloo 2', ui-rounded, 'Segoe UI Variable Display', 'Segoe UI', system-ui,
+    sans-serif;
+  color-scheme: light;
 }
 
 * {
@@ -14,12 +36,71 @@ body {
   align-items: center;
   justify-content: center;
   padding: 32px 20px;
-  background: radial-gradient(90% 70% at 50% 0%, #26241f 0%, #171614 70%);
-  color: #ddd7ca;
+  color: var(--ink);
+
+  /* Sky at the top, grass at the bottom, and a sun tucked into the corner.
+     `fixed` keeps the horizon put when the page scrolls, so the backdrop reads
+     as scenery rather than as a very tall gradient sliding past. */
+  background:
+    radial-gradient(circle at 88% 8%, var(--sun) 0 4%, rgb(255 212 71 / 0.35) 4% 9%, transparent 9%),
+    linear-gradient(
+      180deg,
+      var(--sky) 0%,
+      #bfeaf8 26%,
+      #dff3c2 46%,
+      var(--grass) 74%,
+      var(--grass-deep) 100%
+    );
+  background-attachment: fixed;
 }
 
 #root {
   width: 100%;
   display: flex;
   justify-content: center;
+}
+
+/* --- Snail ---------------------------------------------------------------
+   Shared by the track token and the lobby roster, so it lives here rather
+   than in either stylesheet. */
+
+.snail {
+  display: block;
+  overflow: visible;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Only a racing snail is alive. A roster row is a portrait: six of them
+     bobbing at once in the lobby is noise, not personality. */
+  /* The stalks pivot where they meet the head, so the eyes swing rather than
+     slide — which is why the eyes live inside the group in `Snail.tsx`. */
+  .snail--racing .snail__stalks {
+    animation: snail-bob 2.4s ease-in-out infinite;
+    transform-origin: 37px 22px;
+  }
+
+  .snail--racing .snail__shell {
+    animation: snail-breathe 2.4s ease-in-out infinite;
+    transform-origin: 20px 23px;
+  }
+}
+
+@keyframes snail-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-1.5px) rotate(-3deg);
+  }
+}
+
+@keyframes snail-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
 }

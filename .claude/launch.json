@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "race-dev",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "--port", "5173", "--strictPort"],
+      "runtimeExecutable": "C:\\Users\\aphiw\\AppData\\Roaming\\fnm\\node-versions\\v24.20.0\\installation\\node.exe",
+      "runtimeArgs": ["node_modules/vite/bin/vite.js", "--port", "5173", "--strictPort"],
       "port": 5173
     }
   ]

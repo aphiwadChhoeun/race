@@ -14,5 +14,12 @@ export const DIE_B: DieFaces = [1, 2, 3, 4, 'x', 7]
 /** Always in this order, so a face array is always `[dieA, dieB]`. */
 export const RACE_DICE: readonly DieFaces[] = [DIE_A, DIE_B]
 
-/** Bone for A, slate for B — the dice have to be told apart at a glance. */
-export const DIE_COLORS = [0xf4eee2, 0x4a5160]
+/**
+ * Cream for A, sky for B — the dice have to be told apart at a glance.
+ *
+ * Both stay light on purpose. The pips are near-black and a cross is red
+ * (`DiceTable.tsx`), so a dark die body would swallow the very marks the game
+ * is read from; the old slate B was already the dimmer of the two. Against the
+ * sunlit grass of `.race__table`, cream and sky both keep their edges.
+ */
+export const DIE_COLORS = [0xfff6e3, 0x9fd8f2]

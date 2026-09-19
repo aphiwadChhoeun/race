@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { MAX_SEATS, MIN_SEATS, defaultRoster, type Seat, type SeatKind } from './seats'
+import { Snail } from './Snail'
 import './lobby.css'
 
 export type LobbyProps = {
@@ -29,14 +30,18 @@ export function Lobby({ onStart }: LobbyProps) {
 
   return (
     <div className="lobby">
-      <h1 className="lobby__title">Race</h1>
+      <h1 className="lobby__title">
+        <Snail color="#ff5a4e" size={44} racing />
+        Snail Dash
+      </h1>
       <p className="lobby__blurb">
-        Bid for position on a seven-slot track. Outbid from below, or get knocked off.
+        Six snails, seven leaves, one lawn. Park your bid on a leaf and it pays that many steps —
+        unless somebody undercuts you first and knocks you clean off it.
       </p>
 
       <div className="lobby__section">
         <h2 className="lobby__label" id="lobby-count">
-          Players
+          How many snails?
         </h2>
         <div className="lobby__counts" role="group" aria-labelledby="lobby-count">
           {COUNTS.map((count) => (
@@ -53,19 +58,21 @@ export function Lobby({ onStart }: LobbyProps) {
       </div>
 
       <div className="lobby__section">
-        <h2 className="lobby__label">Seats</h2>
+        <h2 className="lobby__label">The starting line</h2>
         <ul className="lobby__seats">
           {roster.map((seat, index) => (
             <li className="lobby__seat" key={seat.name}>
-              <span className="lobby__dot" style={{ background: seat.color }} />
-              <span className="lobby__name">{seat.name}</span>
+              <Snail color={seat.color} size={30} />
+              <span className="lobby__name" style={{ color: seat.ink }}>
+                {seat.name}
+              </span>
               <div className="lobby__kinds" role="group" aria-label={`${seat.name} is played by`}>
                 <button
                   className="lobby__kind"
                   aria-pressed={seat.kind === 'human'}
                   onClick={() => setKind(index, 'human')}
                 >
-                  Human
+                  You
                 </button>
                 <button
                   className="lobby__kind"
@@ -81,7 +88,7 @@ export function Lobby({ onStart }: LobbyProps) {
       </div>
 
       <button className="lobby__start" onClick={() => onStart(roster)}>
-        Start race
+        Start the dash
       </button>
     </div>
   )
