@@ -130,24 +130,13 @@ export function RaceGame({ roster, onExit }: RaceGameProps) {
             </button>
           </>
         ) : pending ? (
-          <>
-            <button
-              className="race__roll"
-              onClick={game.reroll}
-              disabled={game.rolling || aiSeat}
-            >
-              {game.rolling ? 'Rolling…' : 'Reroll (a cross busts)'}
-            </button>
-            {pending.legal.length === 0 && (
-              <button
-                className="race__roll race__roll--quiet"
-                onClick={game.pass}
-                disabled={game.rolling || aiSeat}
-              >
-                Give up the throw
-              </button>
-            )}
-          </>
+          // No "give up the throw" control: every empty slot is legal and there
+          // are more slots than seats, so a thrower always has a slot to take
+          // and giving up is never the better move. `pass` survives in the hook
+          // for the AI's reroll cap, which can still end a turn with nothing.
+          <button className="race__roll" onClick={game.reroll} disabled={game.rolling || aiSeat}>
+            {game.rolling ? 'Rolling…' : 'Reroll (a cross busts)'}
+          </button>
         ) : (
           <button
             className="race__roll"

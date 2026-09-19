@@ -77,9 +77,8 @@ A turn is three steps:
    number of spaces, and the bid comes off. If someone evicted it first, you get
    nothing.
 2. **Throw** both dice. A double moves you its value straight away. Then
-   decide: place the value on a legal slot, reroll and risk the bust, or — only
-   if no slot is legal — give up the throw.
-3. **Place** the value on a legal empty slot. Every bid on a *higher* slot for a
+   decide: place the value on an empty slot, or reroll and risk the bust.
+3. **Place** the value on any empty slot. Every bid on a *higher* slot for a
    *strictly lower* value is knocked off the track.
 
 That last clause is the whole game. Slot 6 pays the most and is the most
@@ -87,10 +86,16 @@ exposed: it can be taken away by any bigger value placed anywhere beneath it.
 Slot 0 can never be evicted and is worth nothing — but occupying it denies
 everyone else the strongest outbidding position.
 
-A slot is **legal** only if it is empty *and* no lower slot holds a bigger
-value; landing somewhere that is already dead isn't allowed. Ties are safe in
-both directions, since eviction needs a strictly higher value. If a throw has
-nowhere legal to go you may reroll it, or give it up for nothing.
+**Emptiness is the only placement rule.** A slot is yours to take if nobody is
+on it, whatever your value and whatever is standing elsewhere on the track. You
+may drop a `12` on slot 6 with a `60` sitting on slot 2 and gamble that your
+turn comes round before anyone beats it. That is a bad bet, not an illegal one —
+the rules let you make it.
+
+Ties are safe in both directions, since eviction needs a strictly higher value.
+And there is always somewhere to go: six seats at most, seven slots, one bid per
+player, so at least one slot is always empty. A throw is never wasted for want
+of a place to put it.
 
 The rules themselves are a pure module, [`bidding.ts`](src/game/bidding.ts),
 with the edge cases pinned down in [`bidding.test.ts`](src/game/bidding.test.ts).
@@ -105,9 +110,16 @@ Three to six seats, each human or AI, chosen in the lobby before a race.
 An AI seat plays the same rules with one strategy: if anything on the board can
 be outbid, it rerolls until it can outbid it, then takes the **highest** slot
 that knocks someone off. If nothing can be outbid — an empty track, or a board
-whose only bids are unreachable — it settles for the highest legal slot.
+whose only bids are unreachable — it settles for the highest slot it can
+actually *hold*: the highest empty slot that no standing bid already beats from
+below. Only when every empty slot is undercut does it take the highest one
+anyway, since an evictable bid still beats no bid at all.
 
-"Unreachable" is doing real work there. A bid on slot 0 can never be evicted,
+That preference is the AI's judgement, not a rule. The rules would happily let
+it drop a `12` on slot 6 under a `60`; it declines because that bid is free for
+anyone to take.
+
+"Unreachable" is doing real work here. A bid on slot 0 can never be evicted,
 because outbidding needs a *lower* slot and none exists. Neither can a standing
 `76`, because beating it needs `77`, and `77` is `XX`, which a reroll can never
 produce. Without treating both as nothing-to-chase, an AI would reroll into a

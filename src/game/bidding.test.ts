@@ -9,9 +9,11 @@ import {
   legalSlots,
   placeBid,
   resolveRoll,
+  SLOTS,
   type Board,
 } from './bidding'
 import { RACE_DICE } from './dice'
+import { MAX_SEATS } from './seats'
 
 /** Builds a board from `{ slot: value }`, all bids owned by distinct players. */
 function board(bids: Record<number, number>): Board {
@@ -25,23 +27,33 @@ function board(bids: Record<number, number>): Board {
 
 describe('legalSlots', () => {
   test('offers every slot on an empty board', () => {
-    expect(legalSlots(emptyBoard(), 21)).toEqual([0, 1, 2, 3, 4, 5, 6])
+    expect(legalSlots(emptyBoard())).toEqual([0, 1, 2, 3, 4, 5, 6])
   })
 
   test('excludes slots that already hold a bid', () => {
-    expect(legalSlots(board({ 3: 21 }), 64)).toEqual([0, 1, 2, 4, 5, 6])
+    expect(legalSlots(board({ 3: 21 }))).toEqual([0, 1, 2, 4, 5, 6])
   })
 
-  test('excludes slots above a higher bid, since arriving there is instant death', () => {
-    expect(legalSlots(board({ 2: 51 }), 43)).toEqual([0, 1])
+  test('offers a slot above a bigger bid, which is a gamble rather than a foul', () => {
+    expect(legalSlots(board({ 2: 51 }))).toEqual([0, 1, 3, 4, 5, 6])
   })
 
-  test('allows a slot above an equal bid, because eviction needs a strictly higher value', () => {
-    expect(legalSlots(board({ 2: 43 }), 43)).toEqual([0, 1, 3, 4, 5, 6])
+  test('offers the same slots whatever is standing, since only emptiness counts', () => {
+    expect(legalSlots(board({ 0: 76, 4: 11 }))).toEqual([1, 2, 3, 5, 6])
   })
 
-  test('returns nothing when the lowest slots are locked up by bigger bids', () => {
-    expect(legalSlots(board({ 0: 66 }), 21)).toEqual([])
+  test('returns nothing once every slot is taken', () => {
+    expect(legalSlots(board({ 0: 11, 1: 12, 2: 13, 3: 14, 4: 15, 5: 16, 6: 17 }))).toEqual([])
+  })
+})
+
+describe('the track against the table', () => {
+  test('has more slots than there can be seats, so a throw always has somewhere to go', () => {
+    // Each player holds at most one bid, so a full board would need as many
+    // players as slots. This inequality is what makes `legalSlots` non-empty
+    // in a real game — it is why the human "give up the throw" control is gone
+    // and why `decideAi` never has to answer "nowhere to place".
+    expect(MAX_SEATS).toBeLessThan(SLOTS)
   })
 })
 
@@ -137,10 +149,6 @@ describe('resolveRoll', () => {
 describe('DOUBLE_X', () => {
   test('outbids the highest ordinary value', () => {
     expect(DOUBLE_X).toBeGreaterThan(76)
-  })
-
-  test('may be placed on any empty slot, since nothing can evict it', () => {
-    expect(legalSlots(board({ 2: 76 }), DOUBLE_X)).toEqual([0, 1, 3, 4, 5, 6])
   })
 
   test('knocks off every higher slot when placed low', () => {

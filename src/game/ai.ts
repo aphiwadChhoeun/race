@@ -17,19 +17,41 @@ export type AiAction = { kind: 'place'; slot: number } | { kind: 'reroll' }
  * Whether the board holds anything worth chasing.
  *
  * A bid is a target only if some achievable roll could actually take it: there
- * must be an empty slot below it where a `MAX_REROLL_VALUE` would be both
- * legal and a strict improvement. Two cases fail that and would otherwise trap
- * the AI into rerolling to a bust every turn for as long as the bid stands — a
- * bid on slot 0, which has nothing beneath it, and a bid of 76, which nothing
- * reachable beats.
+ * must be an empty slot below it, and the bid must be beatable by a
+ * `MAX_REROLL_VALUE`. Two cases fail that and would otherwise trap the AI into
+ * rerolling to a bust every turn for as long as the bid stands — a bid on slot
+ * 0, which has nothing beneath it, and a bid of 76, which nothing reachable
+ * beats.
  */
 function hasReachableTarget(board: Board): boolean {
-  const reach = legalSlots(board, MAX_REROLL_VALUE)
+  const open = legalSlots(board)
 
   return board.some((bid, slot) => {
     if (!bid || bid.value >= MAX_REROLL_VALUE) return false
-    return reach.some((open) => open < slot)
+    return open.some((empty) => empty < slot)
   })
+}
+
+/**
+ * Empty slots that no standing bid already beats from below.
+ *
+ * The rules let a throw land anywhere empty, including above a bigger bid —
+ * but a bid placed there is free for the taking, since anything beating this
+ * value knocks it off from any of the slots beneath. This is the AI's
+ * preference, not a rule: it still takes an exposed slot when nothing else is
+ * left, because a bid that might be evicted still beats no bid at all.
+ */
+function holdableSlots(board: Board, value: number): number[] {
+  const open: number[] = []
+  let highestBelow = 0
+
+  for (let slot = 0; slot < board.length; slot++) {
+    if (value >= highestBelow && board[slot] === null) open.push(slot)
+    const bid = board[slot]
+    if (bid && bid.value > highestBelow) highestBelow = bid.value
+  }
+
+  return open
 }
 
 /**
@@ -40,13 +62,15 @@ function hasReachableTarget(board: Board): boolean {
  * someone to branch on it.
  */
 export function decideAi(board: Board, value: number): AiAction {
-  const legal = legalSlots(board, value)
-  if (legal.length === 0) return { kind: 'reroll' }
+  const legal = legalSlots(board)
 
   // `legalSlots` returns ascending, so the last entry is always the highest.
   const highest = (slots: number[]) => slots[slots.length - 1]
 
-  if (!hasReachableTarget(board)) return { kind: 'place', slot: highest(legal) }
+  if (!hasReachableTarget(board)) {
+    const holdable = holdableSlots(board, value)
+    return { kind: 'place', slot: highest(holdable.length > 0 ? holdable : legal) }
+  }
 
   // Ask the real rule which placements evict, rather than reimplementing it.
   // The owner id is irrelevant to eviction, so any value will do.

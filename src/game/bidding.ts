@@ -4,8 +4,8 @@ import type { Face } from '../dice'
  * Both dice showing a cross on the opening throw: the strongest bid there is.
  *
  * Stored one above the `76` ceiling so it wins through the ordinary comparison
- * in `legalSlots` and `placeBid` — those two know nothing about it. Rendered as
- * `XX` by `bidLabel`, never as a number.
+ * in `placeBid`, which knows nothing about it. Rendered as `XX` by `bidLabel`,
+ * never as a number.
  */
 export const DOUBLE_X = 77
 
@@ -71,20 +71,19 @@ export function emptyBoard(): Board {
 }
 
 /**
- * Where `value` may be placed.
+ * Where a throw may be placed: every empty slot, whatever it is worth.
  *
- * A slot is open when it is empty and no lower slot holds a bigger value —
- * landing under one would just be evicted on someone's next placement, so the
- * rules forbid it outright.
+ * Emptiness is the only rule. A throw is free to land above a bigger standing
+ * bid, where anyone can knock it off — that is a gamble the player is allowed
+ * to take, not a foul. Taking a slot is never *worse* than not taking one, so
+ * with fewer seats than slots (see `MAX_SEATS`) this is never empty in a real
+ * game and a thrower always has a move.
  */
-export function legalSlots(board: Board, value: number): number[] {
+export function legalSlots(board: Board): number[] {
   const open: number[] = []
-  let highestBelow = 0
 
   for (let slot = 0; slot < board.length; slot++) {
-    if (value >= highestBelow && board[slot] === null) open.push(slot)
-    const bid = board[slot]
-    if (bid && bid.value > highestBelow) highestBelow = bid.value
+    if (board[slot] === null) open.push(slot)
   }
 
   return open

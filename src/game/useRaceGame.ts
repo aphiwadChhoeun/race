@@ -148,7 +148,7 @@ export function useRaceGame(roster: Seat[]) {
       }
 
       const currentBoard = live.current.board
-      const legal = legalSlots(currentBoard, rolled.value)
+      const legal = legalSlots(currentBoard)
       writePending({ value: rolled.value, faces, legal, throws })
       return { kind: 'decide', value: rolled.value, board: currentBoard, legal }
     },
@@ -209,6 +209,14 @@ export function useRaceGame(roster: Seat[]) {
     [endTurn, say, writeBoard],
   )
 
+  /**
+   * Ends the turn with no bid.
+   *
+   * No longer something a player chooses: every empty slot is legal and there
+   * are always more slots than seats, so there is always a bid worth making.
+   * It remains for `useAiTurns`, which needs a way to close out a turn that hit
+   * its reroll cap with a decision still standing.
+   */
   const pass = useCallback(() => {
     if (!live.current.pending || live.current.winner !== null) return
     say(`${live.current.players[live.current.turn].name} gives up the throw — no bid.`)
