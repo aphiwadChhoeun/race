@@ -200,10 +200,19 @@ function isStill(dice: CANNON.Body[]): boolean {
  * The faces are drawn from the CSPRNG first, then a simulation is run and its
  * motion recorded. Simulations are only rejected for settling badly — never for
  * the number they produced.
+ *
+ * `faceIds` may be supplied instead of drawn, which is what makes a throw
+ * portable: `{ seed, faceIds }` describes one completely, so a room can decide
+ * a throw once and every client replay the same tumble. The simulation never
+ * reads them — they only dress the die, via `labelingWith` below — so passing
+ * them in cannot bias the physics, and a client cannot bias it either.
  */
-export function throwDice(dice: readonly DieFaces[], seed: number): Recording {
+export function throwDice(
+  dice: readonly DieFaces[],
+  seed: number,
+  faceIds: number[] = rollFaces(dice.length),
+): Recording {
   const count = dice.length
-  const faceIds = rollFaces(count)
   const { world, dice: bodies } = getSimulator(count)
 
   // Generous upper bound; the buffer is sliced to the real length at the end.

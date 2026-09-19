@@ -33,4 +33,21 @@ describe('throwDice', () => {
     const { labeling } = throwDice([DIE_B], 7).outcomes[0]
     expect([...labeling].sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6])
   })
+
+  test('lands the face ids it is given', () => {
+    const recording = throwDice([DIE_A, DIE_B], 4242, [5, 2])
+    expect(recording.outcomes.map((o) => o.faceId)).toEqual([5, 2])
+    expect(recording.outcomes.map((o) => o.face)).toEqual([DIE_A[4], DIE_B[1]])
+  })
+
+  /* The whole point: a seed and a set of faces describe a throw completely, so
+     an opponent's throw replays here frame-for-frame rather than arriving as a
+     number somebody else already decided. */
+  test('replays identically from the same seed and faces', () => {
+    const a = throwDice([DIE_A, DIE_B], 777, [1, 6])
+    const b = throwDice([DIE_A, DIE_B], 777, [1, 6])
+    expect(b.frameCount).toBe(a.frameCount)
+    expect(Array.from(b.track)).toEqual(Array.from(a.track))
+    expect(b.outcomes.map((o) => o.faceId)).toEqual([1, 6])
+  })
 })
