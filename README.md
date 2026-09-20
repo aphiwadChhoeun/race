@@ -1,6 +1,7 @@
 # Snail Dash
 
 A 3–6 snail dice race with a real rigid-body physics simulation behind the dice.
+Play it against the AI, or share a four-letter code and race someone real.
 
 ```bash
 npm install
@@ -11,7 +12,9 @@ npm run dev
 ```
 
 Built on [cannon-es](https://github.com/pmndrs/cannon-es) for the physics and
-[three.js](https://threejs.org/) for the rendering.
+[three.js](https://threejs.org/) for the rendering, and hosted on Cloudflare —
+one Worker for the app and a Durable Object per room. See
+[Playing with friends](#playing-with-friends) and [Deploying](#deploying).
 
 ```bash
 npm test
@@ -99,11 +102,18 @@ And there is always somewhere to go: six seats at most, seven slots, one bid per
 player, so at least one slot is always empty. A throw is never wasted for want
 of a place to put it.
 
-The rules themselves are a pure module, [`bidding.ts`](src/game/bidding.ts),
-with the edge cases pinned down in [`bidding.test.ts`](src/game/bidding.test.ts).
-[`RaceGame.tsx`](src/game/RaceGame.tsx) only renders; game state and turn
-actions live in [`useRaceGame.ts`](src/game/useRaceGame.ts), and the AI turn
-driver lives in [`useAiTurns.ts`](src/game/useAiTurns.ts).
+The rules themselves are a pure module, [`bidding.ts`](src/engine/bidding.ts),
+with the edge cases pinned down in [`bidding.test.ts`](src/engine/bidding.test.ts),
+and the turn flow around them is [`engine.ts`](src/engine/engine.ts) — a total
+function from a state and an intent to the beats a player watches.
+[`RaceGame.tsx`](src/game/RaceGame.tsx) only renders.
+
+Everything under [`src/engine/`](src/engine) is plain TypeScript with no React,
+no three and no cannon-es in it, because the same files run inside a Cloudflare
+Worker when you race a friend. [`purity.test.ts`](src/engine/purity.test.ts)
+enforces that: the barrel in `src/dice/index.ts` re-exports the renderer and the
+physics, and a single value import through it would put both in the Worker
+bundle with nothing failing to show for it.
 
 ## Players
 
@@ -114,7 +124,7 @@ Each carries two shades of its hue, not one: a saturated `color` for the shell,
 the slime trail and the lane token, and a darker `ink` for its name and its
 bids. The theme is light, so a shell bright enough to read as a cartoon on
 grass is a name too pale to read on cream — one colour cannot do both jobs, and
-[`seats.test.ts`](src/game/seats.test.ts) holds every seat to having both.
+[`seats.test.ts`](src/engine/seats.test.ts) holds every seat to having both.
 
 An AI seat plays the same rules with one strategy: if anything on the board can
 be outbid, it rerolls until it can outbid it, then takes the **highest** slot
@@ -138,6 +148,85 @@ The strategy is deliberately aggressive: rerolling busts on 11/36, so an AI
 that cannot outbid will often end its turn with nothing. It still banks any
 doubles it rolls on the way.
 
+## Playing with friends
+
+Open a lawn, and you get a four-letter code and a link. Send either. Anyone who
+arrives takes the next free snail; every snail nobody claims is played by the
+AI, so two of you and a code is a real race — you never have to round up a third
+person.
+
+The code leaves out `I`, `L`, `O`, `0` and `1`. It exists to be read down a
+phone, and those are the characters people mishear.
+
+A room is **server-authoritative**. A Cloudflare Durable Object holds the one
+true game state, draws every throw, and checks every move against one rule: you
+may act when it is the turn of a seat you own. Nobody can rig a roll from
+devtools, because no browser decides what the dice did.
+
+Clients are handed **snapshots, not rules**. Each message is what just happened
+plus the whole state afterwards, so a browser has nothing to compute and
+therefore nothing to get wrong. Drift is not a bug that gets handled here; it
+is unrepresentable.
+
+What crosses the wire for a throw is `{ seed, faceIds }` — enough for every
+client to run the physics itself and watch the same dice tumble the same way.
+The server never runs a simulation.
+
+**If someone drops**, their seat is marked *away* and the AI plays it only when
+its turn actually comes round. A ten-second wifi blip between your turns costs
+you nothing, and coming back on the same link puts you straight back in your
+snail. The race never stalls on a dead laptop, and nobody loses their snail for
+closing a lid.
+
+**A room closes when the race starts.** A snail appearing at turn nine is not a
+race anyone asked for, and seating a latecomer in an AI's place would hand them
+a position they did not earn.
+
+Solo play runs the *same* room through a transport that skips the network, so
+there is one turn-driving path rather than two — and playing on your own
+exercises the code that runs online.
+
+## Deploying
+
+Hosted on Cloudflare: one Worker serves the app and its rooms.
+
+```bash
+npm run deploy
+```
+
+To work on it, run the app and the Worker side by side. Vite proxies `/api` to
+`wrangler dev`, so you get real Durable Objects and HMR at once:
+
+```bash
+npm run dev
+```
+
+```bash
+npm run dev:worker
+```
+
+Solo play needs only the first.
+
+### What it costs
+
+Nothing, for a game among friends. The Workers Free plan allows 100,000
+requests a day and 13,000 GB-s of Durable Object duration, and static assets are
+free, unlimited, and never counted. A full race is a few hundred requests.
+
+Three decisions keep it there:
+
+- **WebSockets, not polling.** Messages on an open socket are not billed per
+  message. Polling once a second would burn ~86,000 requests a day for a single
+  player.
+- **Hibernation.** State is written to storage after every change, so an idle
+  room may hibernate and stops billing duration.
+- **AI turns resolve in one burst.** No timers, so no billed wakeups. The
+  pauses that make a turn readable happen on the client, which has to animate
+  the dice anyway.
+
+Rooms are disposable. One is reaped two hours after it goes quiet, which is the
+only timer in the system.
+
 ## The dice module
 
 Everything dice-related lives in [`src/dice/`](src/dice/). Drop it into any React
@@ -145,15 +234,19 @@ app:
 
 ```tsx
 import { DiceTable, useDiceRoll, STANDARD_DIE } from './dice'
+import { randomSeed, rollFaces } from './dice/random'
 
 const DICE = [STANDARD_DIE, STANDARD_DIE]
 
 function Turn() {
-  const { recording, playId, rolling, roll, settle } = useDiceRoll(DICE)
+  const { recording, playId, rolling, faces, play, settle } = useDiceRoll(DICE)
 
   const takeTurn = async () => {
-    const faces = await roll() // resolves when the dice stop moving
-    score(faces)               // Face[] — a number, or 'x' on a custom die
+    // A throw is a seed and a set of faces. Decide it wherever the authority
+    // lives — here, or on a server — and every client that plays the same pair
+    // watches the same tumble.
+    await play({ seed: randomSeed(), faceIds: rollFaces(DICE.length) })
+    score(faces) // Face[] — a number, or 'x' on a custom die
   }
 
   return (
@@ -164,6 +257,10 @@ function Turn() {
   )
 }
 ```
+
+`useDiceRoll` decides nothing. It simulates the throw it is handed and resolves
+when playback ends, which is what lets a room hand the same throw to six
+browsers and have all six agree.
 
 | File | Role |
 | --- | --- |
@@ -241,7 +338,7 @@ void. Going much darker is where they start to float again. See the note on
 `.race__table` in [`race.css`](src/game/race.css). To drop shadows entirely,
 remove the catcher block in `DiceTable.tsx` and set `shadowMap.enabled = false`.
 
-The dice themselves are cream and sky ([`dice.ts`](src/game/dice.ts)), and both
+The dice themselves are cream and sky ([`dice.ts`](src/engine/dice.ts)), and both
 stay light on purpose: pips are near-black and a cross is red, so a dark die
 body would swallow the marks the game is read from.
 
@@ -264,13 +361,36 @@ body would swallow the marks the game is read from.
 ## Verification
 
 **Build and run:** `tsc --noEmit` passes clean under `strict`, `noUnusedLocals`
-and `verbatimModuleSyntax`; `vite build` succeeds (801 kB JS, 222 kB gzipped —
+and `verbatimModuleSyntax`; `vite build` succeeds (812 kB JS, 225 kB gzipped —
 mostly three.js, so the chunk-size warning is expected). The dev server runs and
 the game plays: a throw logged "Turbo bids 72 on slot 6" while the dice on
 screen showed exactly 2 and 7, which exercises the physics recording, the
 relabelling, the pip placement and the turn logic together. A later turn had
 Zippy roll a double 1, bank the step, and place `73` on slot 5 to knock Turbo's
 `72` off slot 6 — eviction, the double bonus and the slime trail in one turn.
+
+**Rooms** were driven against a real Durable Object under `wrangler dev`, both
+from a script and from two browser tabs. A host created a room and a guest
+joined by link; the guest was refused both a start ("Only the host can start.")
+and a throw out of turn ("Not your turn."); the host's throw arrived at *both*
+clients as the same `collected, threw` beats, so the guest replays the identical
+dice; and closing the guest's tab left its seat reading `human, away` rather
+than flipping it to AI.
+
+Two bugs were found that way and are worth recording, because neither produced
+an error:
+
+- **A reconnect stranded the player reconnecting.** The returning socket says
+  hello before the old socket's `close` arrives, so the late close wiped the
+  identity the new one had just established — they showed as *away* seconds
+  after coming back, with nothing to correct it until their next turn. A token
+  is now only gone when it has no socket left. A refresh, a tab restore and a
+  flaky network all hit this; React StrictMode just made it happen every time.
+- **The animation queue emptied itself mid-turn.** `useDiceRoll` returned a
+  fresh object each render, so the subscription effect resubscribed on every
+  render and its cleanup dropped the queued beats. A race would simply stop, in
+  silence. The tray is memoised and the subscription now depends on the
+  transport alone.
 
 The track geometry was measured rather than eyeballed: at 0/30 the snail sits
 2px inside its lane's left border and at 30/30 2px inside the right, so the
