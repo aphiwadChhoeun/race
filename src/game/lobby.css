@@ -168,6 +168,120 @@
   box-shadow: 0 0 0 var(--outline), 0 4px 10px rgb(31 68 38 / 0.2);
 }
 
+/* Playing with friends. Kept below the solo start button and behind a divider:
+   it is the second thing most people want, and putting it level with "Start
+   the dash" makes both look optional. */
+.lobby__section--friends {
+  padding-top: 18px;
+  border-top: 2px dashed rgb(47 93 52 / 0.3);
+}
+
+.lobby__blurb--tight {
+  margin: 0;
+}
+
+.lobby__friends {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.lobby__host {
+  flex: 1 1 auto;
+  padding: 11px 20px;
+  border: var(--stroke) solid var(--outline);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffe9a8, #ffc94d);
+  color: var(--outline);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 0 var(--outline);
+  transition: transform 90ms ease, box-shadow 90ms ease, filter 120ms ease;
+}
+
+.lobby__host:hover {
+  filter: brightness(1.05);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 var(--outline);
+}
+
+.lobby__host:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 var(--outline);
+}
+
+.lobby__join {
+  display: flex;
+  gap: 6px;
+}
+
+.lobby__code-input {
+  width: 6.5ch;
+  padding: 9px 12px;
+  border: 2px solid var(--outline);
+  border-radius: 14px;
+  background: var(--card-sunk);
+  color: var(--outline);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 800;
+  /* Codes are read aloud and typed back, so they are shown the way they are
+     spoken: upper case, evenly spaced, never autocorrected. */
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.lobby__code-input::placeholder {
+  color: var(--ink-soft);
+  font-weight: 600;
+  letter-spacing: normal;
+}
+
+/* The code itself, on the waiting screen. Big enough to read off a laptop
+   across a room, and spaced so the characters are dictated one at a time. */
+.lobby__code {
+  margin: 0;
+  padding: 10px 18px;
+  border: var(--stroke) solid var(--outline);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #f6fbe8, var(--card-sunk));
+  box-shadow: 0 4px 0 rgb(47 93 52 / 0.35);
+  color: var(--outline);
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-align: center;
+  text-indent: 0.22em;
+}
+
+.lobby__copy,
+.lobby__leave {
+  align-self: center;
+  padding: 9px 20px;
+  border: 2px solid var(--outline);
+  border-radius: 999px;
+  background: var(--card-sunk);
+  color: var(--outline);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lobby__copy:hover,
+.lobby__leave:hover {
+  background: #eaf6d6;
+}
+
+.lobby__who {
+  color: var(--ink-soft);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
 @media (max-width: 560px) {
   .lobby {
     padding: 18px 16px 20px;
@@ -175,5 +289,18 @@
 
   .lobby__title {
     font-size: 29px;
+  }
+
+  .lobby__code {
+    font-size: 34px;
+  }
+
+  .lobby__friends {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .lobby__join {
+    justify-content: center;
   }
 }

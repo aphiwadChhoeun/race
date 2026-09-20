@@ -112,6 +112,16 @@ export class RaceRoom extends DurableObject {
     const token = this.tokenOf(socket)
     if (!token) return
 
+    // A reconnecting player opens the new socket before the old one's close
+    // gets here — a refresh, a tab restore, a flaky network all do this. Acting
+    // on that late close would mark them away seconds after they came back, and
+    // nothing would put it right until they next took a turn. So a token is
+    // only gone when it has no socket left.
+    const stillHere = this.ctx
+      .getWebSockets()
+      .some((other) => other !== socket && this.tokenOf(other) === token)
+    if (stillHere) return
+
     const room = await this.load('')
     this.post(room.disconnect(token))
     await this.save()

@@ -1,16 +1,23 @@
 import { useState } from 'react'
+import { normaliseCode } from '../engine/codes'
 import { MAX_SEATS, MIN_SEATS, defaultRoster, type Seat, type SeatKind } from '../engine/seats'
 import { Snail } from './Snail'
 import './lobby.css'
 
 export type LobbyProps = {
   onStart: (roster: Seat[]) => void
+  /** Opens a room for `size` seats and shares its code. */
+  onHost: (size: number) => void
+  /** Joins an existing room by the code someone read out. */
+  onJoin: (code: string) => void
 }
 
 const COUNTS = Array.from({ length: MAX_SEATS - MIN_SEATS + 1 }, (_, i) => MIN_SEATS + i)
 
-export function Lobby({ onStart }: LobbyProps) {
+export function Lobby({ onStart, onHost, onJoin }: LobbyProps) {
   const [roster, setRoster] = useState<Seat[]>(() => defaultRoster(MIN_SEATS))
+  const [code, setCode] = useState('')
+  const joinable = normaliseCode(code) !== null
 
   /** Resizing keeps the kinds already chosen for the seats that survive. */
   const resize = (count: number) => {
@@ -90,6 +97,41 @@ export function Lobby({ onStart }: LobbyProps) {
       <button className="lobby__start" onClick={() => onStart(roster)}>
         Start the dash
       </button>
+
+      <div className="lobby__section lobby__section--friends">
+        <h2 className="lobby__label">…or race someone real</h2>
+        <p className="lobby__blurb lobby__blurb--tight">
+          Open a lawn and send the code. Any snail nobody claims is played by the AI, so two of
+          you is plenty.
+        </p>
+        <div className="lobby__friends">
+          <button className="lobby__host" onClick={() => onHost(roster.length)}>
+            Open a lawn for {roster.length}
+          </button>
+          <form
+            className="lobby__join"
+            onSubmit={(event) => {
+              event.preventDefault()
+              const tidy = normaliseCode(code)
+              if (tidy) onJoin(tidy)
+            }}
+          >
+            <input
+              className="lobby__code-input"
+              value={code}
+              onChange={(event) => setCode(event.target.value)}
+              placeholder="Code"
+              aria-label="Room code"
+              maxLength={8}
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <button className="lobby__count" type="submit" disabled={!joinable}>
+              Join
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   )
 }
