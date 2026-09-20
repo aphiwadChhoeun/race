@@ -1,0 +1,19 @@
+name = "snail-dash"
+main = "worker/index.ts"
+compatibility_date = "2026-09-01"
+
+# SPA fallback, so a shared link like /r/AB2C resolves to the app rather than
+# a 404. Asset requests are free and unlimited and never reach the Worker.
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "RaceRoom"
+
+# SQLite-backed, which is what puts Durable Objects on the Workers Free plan.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RaceRoom"]

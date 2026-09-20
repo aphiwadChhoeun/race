@@ -6,3 +6,4 @@ dist
 # Per-machine Claude Code state. launch.json is kept: it's project config.
 .claude/settings.local.json
 
+.wrangler

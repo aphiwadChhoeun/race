@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // DOM is dropped on purpose. The engine is shared with the browser, and
+    // this build is where it should fail if a rule ever reaches for a browser
+    // API that a Worker does not have.
+    "lib": ["ES2022"],
+    "types": ["@cloudflare/workers-types"],
+    "noEmit": true
+  },
+  "include": ["worker", "src/engine", "src/dice/faces.ts", "src/dice/random.ts"],
+  "exclude": ["src/engine/**/*.test.ts"]
+}
