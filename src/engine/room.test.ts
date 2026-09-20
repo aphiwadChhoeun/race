@@ -88,6 +88,26 @@ describe('joining', () => {
   test('tells everyone when the roster changes', () => {
     expect(find(hello(seated(3), 'b'), 'room')).toBeDefined()
   })
+
+  /* Hotseat: one token owning several seats is the whole of what makes local
+     play work through the same authorisation rule as the network. */
+  test('lets one token claim several seats at once', () => {
+    const room = new Room('AB2C')
+    const out = hello(room, 'local', { create: true, size: 5, claim: 3 })
+    expect(find(out, 'welcome')).toMatchObject({ seats: [0, 1, 2] })
+    expect(room.view().seats.map((s) => s.kind)).toEqual([
+      'human',
+      'human',
+      'human',
+      'ai',
+      'ai',
+    ])
+  })
+
+  test('claims what it can when asked for more seats than are free', () => {
+    const room = seated(4, ['b'])
+    expect(find(hello(room, 'greedy', { claim: 9 }), 'welcome')).toMatchObject({ seats: [2, 3] })
+  })
 })
 
 describe('starting', () => {

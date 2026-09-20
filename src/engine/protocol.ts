@@ -20,7 +20,18 @@ export type RoomView = {
 }
 
 export type ClientMessage =
-  | { type: 'hello'; token: string; create?: boolean; size?: number }
+  /**
+   * `claim` is which seats to take, and is how hotseat works: local play
+   * claims every human seat with one token, and the authorisation rule then
+   * needs no special case for it.
+   *
+   * A number takes that many free seats, lowest first — what an arrival over
+   * the network wants, and the Worker forces it to 1, one browser one snail.
+   * An array takes exactly those seats, which is what the lobby needs: it
+   * lets you make seat 1 human and seat 0 an AI, so the seats cannot simply
+   * be counted off from the front.
+   */
+  | { type: 'hello'; token: string; create?: boolean; size?: number; claim?: number | number[] }
   | { type: 'rename'; name: string }
   | { type: 'resize'; size: number }
   | { type: 'start' }
@@ -39,6 +50,14 @@ export type ServerMessage =
    */
   | { type: 'welcome'; token: string; seats: number[]; room: RoomView; game: GameState | null }
   | { type: 'room'; room: RoomView }
+  /**
+   * Adopt this state now and drop anything queued.
+   *
+   * Sent when a race starts — there are no beats to watch on the way to the
+   * starting line — and it is the same jump-to-the-present a reconnecting
+   * player gets through `welcome`.
+   */
+  | { type: 'snapshot'; game: GameState }
   | { type: 'steps'; steps: Step[] }
   | { type: 'error'; reason: string; fatal: boolean }
 

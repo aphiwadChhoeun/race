@@ -140,7 +140,7 @@ export class Room {
 
     switch (message.type) {
       case 'hello':
-        return this.hello(token, message.create === true, message.size)
+        return this.hello(token, message.create === true, message.size, message.claim ?? 1)
       case 'rename':
         return this.rename(token, message.name)
       case 'resize':
@@ -156,19 +156,22 @@ export class Room {
     }
   }
 
-  private hello(token: string, create: boolean, size?: number): Outbox[] {
+  private hello(
+    token: string,
+    create: boolean,
+    size: number | undefined,
+    claim: number | number[],
+  ): Outbox[] {
     const mine = this.seatsOf(token)
 
     // A token that already owns seats is coming back, not arriving. This is
-    // the whole of reconnection: the seat was never taken away.
-    if (mine.length > 0) {
-      this.connected.add(token)
-      return [this.welcome(token, mine), this.broadcastRoom()]
-    }
+    // the whole of reconnection: the seat was never taken away, so there is
+    // nothing to give back.
+    if (mine.length > 0) return [this.welcome(token, mine), this.broadcastRoom()]
 
     if (create) {
       // A live room means two hosts drew the same code. Say so loudly, so the
-      // client can draw another rather than the two of them sharing a room.
+      // client draws another rather than the two of them sharing a room.
       if (this.seats.length > 0) return this.error(token, 'That code is taken.', true)
 
       const count = size ?? MIN_SEATS
@@ -177,25 +180,40 @@ export class Room {
       }
 
       this.seats = Array.from({ length: count }, (_, index) => seatFromPalette(index))
-      this.host = 0
-      this.seats[0].token = token
-      this.connected.add(token)
-      return [this.welcome(token, [0]), this.broadcastRoom()]
+    } else if (this.seats.length === 0) {
+      return this.error(token, 'No such room.', true)
+    } else if (this.phase === 'racing') {
+      // A snail that appears at turn nine is not a race anyone asked for, and
+      // seating a latecomer in an AI's place hands them a position they did
+      // not earn. Reconnection is handled above, so this only turns away
+      // strangers.
+      return this.error(token, 'That race has already started.', true)
     }
 
-    if (this.seats.length === 0) return this.error(token, 'No such room.', true)
+    const taken: number[] = []
 
-    // A snail that appears at turn nine is not a race anyone asked for, and
-    // seating a latecomer in an AI's place hands them a position they did not
-    // earn. Reconnection is handled above, so this only turns away strangers.
-    if (this.phase === 'racing') return this.error(token, 'That race has already started.', true)
+    if (Array.isArray(claim)) {
+      for (const seat of claim) {
+        if (this.seats[seat]?.token !== null) continue
+        this.seats[seat].token = token
+        taken.push(seat)
+      }
+    } else {
+      for (let wanted = 0; wanted < Math.max(1, claim); wanted++) {
+        const free = this.seats.findIndex((seat) => seat.token === null)
+        if (free === -1) break
+        this.seats[free].token = token
+        taken.push(free)
+      }
+    }
 
-    const free = this.seats.findIndex((seat) => seat.token === null)
-    if (free === -1) return this.error(token, 'That race is full.', true)
+    if (taken.length === 0) return this.error(token, 'That race is full.', true)
 
-    this.seats[free].token = token
-    this.connected.add(token)
-    return [this.welcome(token, [free]), this.broadcastRoom()]
+    // The host is whoever made the room, not whoever sits in seat 0 — locally
+    // you may well leave seat 0 to an AI and take seat 1 yourself.
+    if (create) this.host = taken[0]
+
+    return [this.welcome(token, taken), this.broadcastRoom()]
   }
 
   private welcome(token: string, seats: number[]): Outbox {
@@ -264,8 +282,14 @@ export class Room {
     this.phase = 'racing'
     this.game_ = startGame(players)
 
-    const steps = this.driveAi()
-    return [this.broadcastRoom(), ...this.publish(steps)]
+    // The starting line is not something to watch happen, so it goes out as a
+    // snapshot rather than a beat. Any AI seats ahead of the first human then
+    // follow as steps.
+    return [
+      this.broadcastRoom(),
+      { to: 'all', message: { type: 'snapshot', game: this.game_ } },
+      ...this.publish(this.driveAi()),
+    ]
   }
 
   /** A game intent, once the sender has been shown to own the seat on the clock. */

@@ -1,30 +1,52 @@
 import { useMemo, useState } from 'react'
 import { DiceTable } from '../dice'
 import { SLOTS, bidLabel, faceLabel } from '../engine/bidding'
+import { TRACK_LENGTH } from '../engine/state'
+import type { RoomClient } from '../net/useRoom'
 import { DIE_COLORS } from './dice'
-import type { Seat } from '../engine/seats'
 import { Snail } from './Snail'
-import { TRACK_LENGTH, useRaceGame } from './useRaceGame'
-import { useAiTurns } from './useAiTurns'
 import './race.css'
 
 export type RaceGameProps = {
-  roster: Seat[]
+  client: RoomClient
+  /** Starts another race with the same field, or null when that is not on offer. */
+  onAgain: (() => void) | null
   onExit: () => void
+  exitLabel: string
 }
 
-export function RaceGame({ roster, onExit }: RaceGameProps) {
-  const game = useRaceGame(roster)
-  const aiThinking = useAiTurns(game)
+/** What the big button says while it is not yours to press. */
+function buttonLabel(rolling: boolean, waiting: boolean, active: string, ready: string) {
+  if (rolling) return 'Rolling…'
+  if (waiting) return `${active} is racing…`
+  return ready
+}
+
+export function RaceGame({ client, onAgain, onExit, exitLabel }: RaceGameProps) {
+  const { game, mySeats, busy, tray } = client
   const [muted, setMuted] = useState(false)
+  const slots = useMemo(() => Array.from({ length: SLOTS }, (_, slot) => slot), [])
+
+  if (!game) {
+    return (
+      <div className="race">
+        <p className="race__status" role="status">
+          Lining the snails up…
+        </p>
+      </div>
+    )
+  }
 
   const { players, board, turn, pending, winner, log } = game
   const active = players[turn]
-  const slots = useMemo(() => Array.from({ length: SLOTS }, (_, slot) => slot), [])
-  // Known at render time, unlike `aiThinking`, which is state set inside the
-  // AI effect and so lags `turn` by a commit — a gate on that state alone
-  // leaves controls live for one painted frame after the turn hands over.
-  const aiSeat = winner === null && active?.kind === 'ai'
+  const mine = mySeats.includes(turn)
+
+  // Gated on `busy`, not merely on whose turn it is. The room resolves a turn
+  // the moment it is asked — an AI's whole turn arrives as one burst — so it
+  // runs ahead of the animation, and a gate on the turn alone would leave
+  // these live for a board the player has not been shown happening yet.
+  const canAct = winner === null && mine && !busy && !tray.rolling
+  const waiting = busy || !mine
 
   return (
     <div className="race">
@@ -39,7 +61,7 @@ export function RaceGame({ roster, onExit }: RaceGameProps) {
             Sound
           </label>
           <button className="race__exit" onClick={onExit}>
-            Lobby
+            {exitLabel}
           </button>
         </div>
       </header>
@@ -50,10 +72,16 @@ export function RaceGame({ roster, onExit }: RaceGameProps) {
           const isTurn = turn === index && winner === null
 
           return (
-            <div className="race__lane" key={player.name} role="listitem">
+            <div className="race__lane" key={index} role="listitem">
               <span className="race__lane-name" style={{ color: player.ink }}>
                 {player.name}
-                {player.kind === 'ai' && <span className="race__lane-tag">AI</span>}
+                {mySeats.includes(index) ? (
+                  <span className="race__lane-tag">you</span>
+                ) : player.away ? (
+                  <span className="race__lane-tag">away</span>
+                ) : player.kind === 'ai' ? (
+                  <span className="race__lane-tag">AI</span>
+                ) : null}
               </span>
               <div className="race__lane-tiles">
                 <div
@@ -99,8 +127,8 @@ export function RaceGame({ roster, onExit }: RaceGameProps) {
               <button
                 key={slot}
                 className={`race__slot${owner ? ' race__slot--taken' : ''}`}
-                onClick={() => game.place(slot)}
-                disabled={!selectable || aiSeat}
+                onClick={() => client.send({ type: 'place', slot })}
+                disabled={!selectable || !canAct}
                 aria-label={
                   bid
                     ? `Slot ${slot}, ${players[bid.player].name} bidding ${bidLabel(bid.value)}`
@@ -124,10 +152,10 @@ export function RaceGame({ roster, onExit }: RaceGameProps) {
 
       <div className="race__table">
         <DiceTable
-          recording={game.recording}
-          playId={game.playId}
+          recording={tray.recording}
+          playId={tray.playId}
           volume={muted ? 0 : 0.45}
-          onSettle={game.settle}
+          onSettle={tray.settle}
           dieColors={DIE_COLORS}
         />
       </div>
@@ -135,46 +163,44 @@ export function RaceGame({ roster, onExit }: RaceGameProps) {
       <div className="race__controls">
         {winner !== null ? (
           <>
-            <button className="race__roll race__roll--win" onClick={game.reset}>
-              {players[winner].name} wins the dash — race again
-            </button>
+            {onAgain && (
+              <button className="race__roll race__roll--win" onClick={onAgain}>
+                {players[winner].name} wins the dash — race again
+              </button>
+            )}
             <button className="race__roll race__roll--quiet" onClick={onExit}>
-              Back to lobby
+              {onAgain ? exitLabel : `${players[winner].name} wins the dash — ${exitLabel}`}
             </button>
           </>
         ) : pending ? (
           // No "give up the throw" control: every empty slot is legal and there
           // are more slots than seats, so a thrower always has a slot to take
-          // and giving up is never the better move. `pass` survives in the hook
-          // for the AI's reroll cap, which can still end a turn with nothing.
-          <button className="race__roll" onClick={game.reroll} disabled={game.rolling || aiSeat}>
-            {game.rolling ? 'Rolling…' : 'Reroll — a cross busts you'}
+          // and giving up is never the better move. The engine keeps `pass` for
+          // the AI's reroll cap, which can still end a turn with nothing.
+          <button
+            className="race__roll"
+            onClick={() => client.send({ type: 'reroll' })}
+            disabled={!canAct}
+          >
+            {buttonLabel(tray.rolling, waiting, active.name, 'Reroll — a cross busts you')}
           </button>
         ) : (
           <button
             className="race__roll"
-            onClick={game.startTurn}
-            disabled={game.rolling || aiSeat}
+            onClick={() => client.send({ type: 'throw' })}
+            disabled={!canAct}
           >
-            {game.rolling
-              ? 'Rolling…'
-              : aiThinking
-                ? `${active.name} is thinking…`
-                : `Throw for ${active.name}`}
+            {buttonLabel(tray.rolling, waiting, active.name, `Throw for ${active.name}`)}
           </button>
         )}
       </div>
 
-      {/* Screen readers get the result announced once the dice have settled — for
-          an AI seat, the thinking state is prepended rather than replacing the
-          log, so a bid, eviction, bust or double is still announced during its
-          turn instead of only "thinking" for the whole thing. */}
+      {/* Screen readers get the result announced once the dice have settled.
+          The log advances one beat at a time as the queue drains, so a bid,
+          eviction, bust or double is announced as it is shown rather than a
+          whole AI turn arriving at once. */}
       <p className="race__status" role="status">
-        {game.rolling
-          ? 'Rolling the dice.'
-          : aiThinking
-            ? `${active.name} is thinking… ${log[0]}`
-            : log[0]}
+        {tray.rolling ? 'Rolling the dice.' : log[0]}
       </p>
 
       <ul className="race__log">
