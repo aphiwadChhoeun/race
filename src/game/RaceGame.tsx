@@ -3,6 +3,7 @@ import { DiceTable } from '../dice'
 import { SLOTS, bidLabel, faceLabel } from '../engine/bidding'
 import { TRACK_LENGTH } from '../engine/state'
 import type { RoomClient } from '../net/useRoom'
+import { ConfirmDialog } from './ConfirmDialog'
 import { DIE_COLORS } from './dice'
 import { Snail } from './Snail'
 import './race.css'
@@ -25,6 +26,7 @@ function buttonLabel(rolling: boolean, waiting: boolean, active: string, ready: 
 export function RaceGame({ client, onAgain, onExit, exitLabel }: RaceGameProps) {
   const { game, mySeats, busy, tray } = client
   const [muted, setMuted] = useState(false)
+  const [confirmingExit, setConfirmingExit] = useState(false)
   const slots = useMemo(() => Array.from({ length: SLOTS }, (_, slot) => slot), [])
 
   if (!game) {
@@ -60,11 +62,24 @@ export function RaceGame({ client, onAgain, onExit, exitLabel }: RaceGameProps) 
             <input type="checkbox" checked={!muted} onChange={(e) => setMuted(!e.target.checked)} />
             Sound
           </label>
-          <button className="race__exit" onClick={onExit}>
+          <button
+            className="race__exit"
+            onClick={() => (winner === null ? setConfirmingExit(true) : onExit())}
+          >
             {exitLabel}
           </button>
         </div>
       </header>
+
+      {confirmingExit && (
+        <ConfirmDialog
+          message="Leave this race? Your progress won't be saved."
+          confirmLabel="Leave"
+          cancelLabel="Keep racing"
+          onConfirm={onExit}
+          onCancel={() => setConfirmingExit(false)}
+        />
+      )}
 
       <div className="race__track" role="list" aria-label="Race track">
         {players.map((player, index) => {

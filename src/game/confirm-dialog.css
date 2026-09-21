@@ -1,0 +1,78 @@
+/* A scrim over the race card and, on top of it, a small stamped card in the
+   same cartoon style — same outline, same "lifted" shadow, same pill
+   buttons — so the prompt reads as part of this game, not a browser alert. */
+
+.confirm-dialog__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgb(31 68 38 / 0.45);
+  border-radius: inherit;
+}
+
+.confirm-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 320px;
+  padding: 20px 22px;
+  border: var(--stroke) solid var(--outline);
+  border-radius: 20px;
+  background: var(--card);
+  box-shadow: var(--lift-deep);
+}
+
+.confirm-dialog__message {
+  margin: 0;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.confirm-dialog__actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.confirm-dialog__cancel,
+.confirm-dialog__confirm {
+  padding: 9px 18px;
+  border: 2px solid var(--outline);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 0 var(--outline);
+  transition: transform 90ms ease, box-shadow 90ms ease, background 120ms ease;
+}
+
+.confirm-dialog__cancel {
+  background: linear-gradient(180deg, #ffe17a, #ffbe2e);
+  color: var(--outline);
+}
+
+.confirm-dialog__cancel:hover {
+  filter: brightness(1.06);
+}
+
+.confirm-dialog__confirm {
+  background: var(--card-sunk);
+  color: var(--outline);
+}
+
+.confirm-dialog__confirm:hover {
+  background: #ffe9a8;
+}
+
+.confirm-dialog__cancel:active,
+.confirm-dialog__confirm:active {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 var(--outline);
+}

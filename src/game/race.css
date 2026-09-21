@@ -3,6 +3,7 @@
    tokens (`--stroke`, `--lift`) so the cartoon reads as one hand, not six. */
 
 .race {
+  position: relative;
   width: min(760px, 100%);
   display: flex;
   flex-direction: column;
