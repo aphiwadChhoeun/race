@@ -49,9 +49,11 @@ export class Room {
   /**
    * Tokens with a socket open right now.
    *
-   * Never persisted: hibernation drops every socket, so a restored room has to
-   * believe nobody is watching until they say hello again. Believing otherwise
-   * would leave it refusing to play a seat whose owner left hours ago.
+   * Never persisted: hibernation evicts this object's own memory, not the
+   * sockets themselves, so a restore starts blank and trusts the transport to
+   * call `reconnect` for every socket it still holds. Without that, a seat
+   * whose owner is silent only because it is not yet their turn would be
+   * mistaken for one whose owner left, and handed to the AI.
    */
   private connected = new Set<string>()
 
@@ -388,5 +390,19 @@ export class Room {
   disconnect(token: string): Outbox[] {
     if (!this.connected.delete(token)) return []
     return [this.broadcastRoom()]
+  }
+
+  /**
+   * A socket the transport still holds, told to the room rather than
+   * discovered by it.
+   *
+   * Called once per socket right after a restore, before anything the socket
+   * sends is handled. Without it, only whoever happens to speak first after a
+   * hibernation-wake would count as connected, and every other seat's owner —
+   * silent purely because it is not their turn — would look exactly like one
+   * who left, and lose their turn to the AI while still sitting there.
+   */
+  reconnect(token: string): void {
+    this.connected.add(token)
   }
 }

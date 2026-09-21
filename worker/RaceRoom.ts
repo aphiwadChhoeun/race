@@ -32,6 +32,17 @@ export class RaceRoom extends DurableObject {
 
     const saved = await this.ctx.storage.get<RoomSnapshot>(SAVED)
     this.room = saved ? Room.restore(saved) : new Room(code)
+
+    // A hibernation-wake evicts this object's memory, not the sockets
+    // themselves — `getWebSockets` still returns every one still open. Told
+    // to the room once here, before anything a socket sends is handled, so a
+    // seat silent only because it is not yet their turn is never mistaken for
+    // one whose owner left and handed to the AI.
+    for (const socket of this.ctx.getWebSockets()) {
+      const token = this.tokenOf(socket)
+      if (token) this.room.reconnect(token)
+    }
+
     return this.room
   }
 

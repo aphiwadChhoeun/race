@@ -290,4 +290,18 @@ describe('saving', () => {
     const restored = reload(room)
     expect(find(hello(restored, 'b'), 'welcome')).toMatchObject({ seats: [1] })
   })
+
+  /* The transport calls `reconnect` for every socket it still holds right
+     after a restore — the whole point being that a seat whose owner is
+     merely silent, because it is not their turn yet, must not be mistaken
+     for one whose owner left. */
+  test('reconnect keeps a still-open seat out of AI hands after a restore', () => {
+    const room = seated(3, ['b'])
+    room.handle('host', { type: 'start' })
+    const restored = reload(room)
+    restored.reconnect('host')
+    restored.reconnect('b')
+    hostTurn(restored)
+    expect(restored.view().seats[1]).toMatchObject({ kind: 'human', away: false })
+  })
 })
